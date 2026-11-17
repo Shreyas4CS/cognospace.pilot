@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Cogno Pilot · Cognospace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#ffffff;--ink:#0b1220;--ink2:#334155;--muted:#6b7a90;--line:#e6eaf2;--soft:#f0f3fa;
+  --brand:#4f46e5;--brand2:#0ea5e9;--grad:linear-gradient(135deg,#4f46e5 0%,#0ea5e9 100%);
+  --ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--r:18px;
+  --sh:0 1px 2px rgba(16,24,40,.04),0 10px 30px rgba(16,24,40,.06);
+  --sh2:0 2px 6px rgba(16,24,40,.06),0 24px 60px rgba(79,70,229,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit;-webkit-tap-highlight-color:transparent}
+input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.muted{color:var(--muted)}
+.gt{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- logo ---------- */
+.logo-slot{display:inline-flex;align-items:center;height:30px}
+.logo-slot img{height:100%;width:auto;display:block}
+.logo-slot.sm{height:24px}
+.wm{display:inline-flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.14em;font-size:13px;color:var(--ink)}
+.wm svg{height:100%;width:auto}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .div{width:1px;height:22px;background:var(--line)}
+.brand b{font-weight:800;font-size:17px;letter-spacing:-.01em}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border-radius:12px;font-weight:700;font-size:14px;transition:transform .12s,box-shadow .2s,background .2s}
+.btn:active{transform:scale(.97)}
+.btn svg{width:18px;height:18px}
+.btn.primary{background:var(--grad);color:#fff;box-shadow:0 6px 18px rgba(79,70,229,.28)}
+.btn.soft{background:var(--soft);color:var(--ink2)}
+.btn.soft:hover{background:#e7ecf7}
+.btn.ghost{border:1px solid var(--line);background:#fff;color:var(--ink2)}
+.btn.danger{color:var(--bad)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;pointer-events:none}
+.icon-btn{width:40px;height:40px;border-radius:12px;display:inline-grid;place-items:center;background:#fff;border:1px solid var(--line);color:var(--ink2);transition:.15s}
+.icon-btn svg{width:19px;height:19px}
+.icon-btn:hover{border-color:#cfd6e6}
+.icon-btn.on{background:var(--soft);border-color:#c7cdfa;color:var(--brand)}
+.icon-btn.off{background:#fef2f2;border-color:#fecaca;color:var(--bad)}
+.icon-btn:disabled{opacity:.4;pointer-events:none}
+
+/* ================= LANDING ================= */
+#landing{min-height:100vh;background:
+  radial-gradient(900px 500px at 85% -10%,rgba(14,165,233,.14),transparent 60%),
+  radial-gradient(800px 500px at -10% 10%,rgba(79,70,229,.12),transparent 60%),#fbfcff}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+.lnav{display:flex;align-items:center;justify-content:space-between;height:76px}
+.lnav a{color:var(--ink2);text-decoration:none;font-weight:600;font-size:14px}
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center;padding:40px 0 70px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:99px;background:#fff;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink2);box-shadow:var(--sh)}
+.eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(16,185,129,.18)}
+.hero h1{font-size:clamp(38px,5.2vw,62px);line-height:1.04;letter-spacing:-.035em;margin:22px 0 18px;font-weight:800}
+.hero p.lead{font-size:18px;line-height:1.6;color:var(--ink2);max-width:540px;margin:0 0 30px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:560px}
+.role{display:flex;gap:14px;align-items:center;text-align:left;padding:18px;border-radius:20px;background:#fff;border:1.5px solid var(--line);box-shadow:var(--sh);transition:.2s}
+.role:hover{border-color:#a5b4fc;transform:translateY(-2px);box-shadow:var(--sh2)}
+.role .ri{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;background:var(--grad)}
+.role .ri svg{width:24px;height:24px}
+.role.alt .ri{background:linear-gradient(135deg,#0ea5e9,#22c55e)}
+.role b{display:block;font-size:16px}
+.role small{color:var(--muted);font-size:13px}
+.fleet{display:flex;align-items:center;gap:10px;margin-top:18px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.fleet input{height:34px;width:150px;border-radius:10px;border:1px solid var(--line);padding:0 12px;background:#fff;font-weight:600;color:var(--ink)}
+.hero-art{position:relative}
+.hero-art .frame{border-radius:28px;background:#fff;padding:12px;box-shadow:var(--sh2);border:1px solid var(--line)}
+.hero-art svg{display:block;width:100%;height:auto;border-radius:20px}
+.float{position:absolute;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh2);padding:12px 14px;display:flex;gap:10px;align-items:center;font-size:13px;font-weight:600}
+.float .fi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+.float small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.f1{right:-20px;bottom:150px;animation:bob 5s ease-in-out infinite}
+.f2{left:-24px;top:34px;animation:bob 6s ease-in-out infinite reverse}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.section{padding:70px 0}
+.sec-h{text-align:center;max-width:620px;margin:0 auto 40px}
+.sec-h h2{font-size:34px;letter-spacing:-.03em;margin:10px 0}
+.sec-h p{color:var(--ink2);margin:0;line-height:1.6}
+.kicker{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--brand);text-transform:uppercase}
+.feats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.feat{background:#fff;border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--sh)}
+.feat .fi{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;margin-bottom:16px}
+.feat .fi svg{width:22px;height:22px}
+.feat h3{margin:0 0 8px;font-size:17px}
+.feat p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+.step{position:relative;padding:26px;border-radius:22px;background:linear-gradient(180deg,#fff,#f8faff);border:1px solid var(--line)}
+.step:before{counter-increment:s;content:counter(s);position:absolute;top:22px;right:24px;font-size:48px;font-weight:800;line-height:1;color:#eef1fb}
+.step h3{margin:0 0 8px;font-size:17px;position:relative}
+.step p{margin:0;color:var(--muted);font-size:14px;line-height:1.6;position:relative}
+footer{border-top:1px solid var(--line);background:#fff;margin-top:30px}
+.foot{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px;padding:40px 0 26px}
+.foot h4{margin:0 0 12px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.foot p,.foot li{font-size:14px;color:var(--ink2);line-height:1.8;margin:0}
+.foot ul{list-style:none;margin:0;padding:0}
+.foot a{color:var(--ink2);text-decoration:none}
+.foot-b{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding:18px 0 26px;font-size:13px;color:var(--muted)}
+
+/* ================= APP ================= */
+#app{min-height:100vh;display:flex;flex-direction:column}
+.bar{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;height:66px;padding:0 18px;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.role-tag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:5px 9px;border-radius:8px;background:var(--soft);color:var(--brand)}
+.seg{display:inline-flex;padding:4px;border-radius:14px;background:var(--soft);border:1px solid var(--line)}
+.seg button{height:36px;padding:0 20px;border-radius:10px;font-weight:700;font-size:14px;color:var(--muted);display:flex;align-items:center;gap:7px;transition:.2s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(16,24,40,.08)}
+.seg button.on[data-mode=live]{color:#fff;background:var(--grad)}
+.seg button i{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
+.seg.locked{opacity:.6;pointer-events:none}
+.bar-r{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 13px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:600;color:var(--ink2);max-width:220px}
+.pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill svg{width:16px;height:16px;flex:none}
+.dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;flex:none}
+.dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(16,185,129,.16)}
+.dot.wait{background:var(--warn);animation:pulse 1.4s infinite}
+.dot.bad{background:var(--bad)}
+@keyframes pulse{50%{opacity:.35}}
+
+.layout{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:18px;padding:18px;max-width:1500px;width:100%;margin:0 auto}
+.stage-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{position:relative;border-radius:24px;overflow:hidden;background:#e9eef6;aspect-ratio:16/10;box-shadow:var(--sh);border:1px solid var(--line)}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:transparent}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.stage-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--ink2)}
+.stage-empty .ei{width:64px;height:64px;border-radius:20px;background:#fff;display:grid;place-items:center;margin:0 auto 14px;box-shadow:var(--sh);color:var(--brand)}
+.stage-empty .ei svg{width:28px;height:28px}
+.stage-empty b{display:block;font-size:17px;margin-bottom:6px}
+.stage-empty p{margin:0 0 16px;color:var(--muted);font-size:14px}
+.banner{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-radius:99px;padding:7px 14px;font-size:12px;font-weight:700;box-shadow:var(--sh);white-space:nowrap}
+.gate{position:absolute;inset:0;display:grid;place-items:center;background:rgba(245,247,251,.72);backdrop-filter:blur(6px);text-align:center;padding:24px}
+.gate .gc{background:#fff;border-radius:22px;padding:24px;box-shadow:var(--sh2);max-width:340px}
+.gate .gc b{display:block;font-size:18px;margin:10px 0 6px}
+.gate .gc p{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.5}
+
+/* HUD */
+.hud{position:absolute;inset:0;pointer-events:none}
+.hud-tl{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:12px;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);font-size:12.5px;font-weight:700;box-shadow:0 4px 14px rgba(16,24,40,.1)}
+.chip i{width:8px;height:8px;border-radius:50%}
+.chip.auto{background:var(--grad);color:#fff}
+.chip.stop{background:var(--bad);color:#fff}
+.chip.limit{background:#fff7e6;color:#b45309}
+.chip.go{background:#ecfdf5;color:#047857}
+.gauge{position:absolute;right:14px;top:14px;width:104px;height:104px;border-radius:50%;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);box-shadow:0 6px 20px rgba(16,24,40,.12);display:grid;place-items:center}
+.gauge svg{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);transform:rotate(-90deg)}
+.gauge .gv{text-align:center;line-height:1}
+.gauge .gv b{font-size:28px;font-weight:800;letter-spacing:-.03em}
+.gauge .gv small{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-top:3px;letter-spacing:.06em}
+.hud-b{position:absolute;left:14px;right:14px;bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.sign-chip{display:flex;align-items:center;gap:10px;padding:10px 14px 10px 10px;border-radius:16px;background:rgba(255,255,255,.95);box-shadow:0 8px 24px rgba(16,24,40,.14);font-weight:700}
+.sign-chip .sw{width:30px;height:30px;border-radius:9px}
+.sign-chip small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.ocr-chip{max-width:45%;font-size:11.5px;font-weight:600}
+
+.camtools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.camtools .sp{flex:1}
+.stat{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--ink2)}
+
+.predict{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 16px;box-shadow:var(--sh)}
+.predict .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--muted);font-weight:600}
+.predict .ph b{color:var(--ink);font-size:15px}
+.pbar{display:grid;grid-template-columns:120px 1fr 44px;gap:10px;align-items:center;font-size:13px;font-weight:600;margin:6px 0}
+.pbar .t{height:8px;border-radius:9px;background:var(--soft);overflow:hidden}
+.pbar .t i{display:block;height:100%;border-radius:9px;transition:width .25s}
+.pbar span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbar span:last-child{text-align:right;color:var(--muted)}
+
+/* side */
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px}
+.card h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card .sub{margin:0 0 12px;font-size:13px;color:var(--muted);line-height:1.5}
+.tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--soft);margin-bottom:12px}
+.tabs button{flex:1;height:34px;border-radius:9px;font-weight:700;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(16,24,40,.06)}
+.badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--brand);color:#fff;font-size:10.5px;display:inline-grid;place-items:center}
+.addrow{display:flex;gap:8px;margin-bottom:12px}
+.addrow input{flex:1;height:42px;border-radius:12px;border:1px solid var(--line);padding:0 14px;background:var(--soft);outline:none;min-width:0}
+.addrow input:focus{border-color:#a5b4fc;background:#fff}
+.cls{border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;transition:.2s}
+.cls:hover{border-color:#d6dcea}
+.cls-top{display:flex;align-items:center;gap:10px}
+.sw{width:14px;height:14px;border-radius:5px;flex:none}
+.cname{flex:1;border:0;background:transparent;font-weight:700;font-size:14.5px;outline:none;min-width:0;padding:4px 0}
+.cname:focus{background:var(--soft);border-radius:6px;padding:4px 6px}
+.count{font-size:12px;font-weight:700;color:var(--muted);background:var(--soft);padding:4px 8px;border-radius:8px;white-space:nowrap}
+.del{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:12px;font-weight:700}
+.del:hover{background:#fef2f2;color:var(--bad)}
+.del.arm{background:var(--bad);color:#fff;width:auto;padding:0 8px}
+.thumbs{display:flex;gap:5px;margin:10px 0 0;overflow:hidden}
+.thumbs img{width:40px;height:40px;border-radius:9px;object-fit:cover;flex:none;background:var(--soft)}
+.kw{width:100%;height:36px;border-radius:10px;border:1px dashed #d4dbe8;padding:0 11px;font-size:13px;margin-top:10px;background:#fff;outline:none}
+.kw:focus{border-style:solid;border-color:#a5b4fc}
+.cls-foot{display:flex;gap:8px;margin-top:10px;align-items:center}
+.rec{flex:1;height:40px;border-radius:12px;background:var(--soft);font-weight:700;font-size:13px;color:var(--ink2);display:flex;align-items:center;justify-content:center;gap:8px;user-select:none;-webkit-user-select:none;touch-action:none;transition:.15s}
+.rec i{width:10px;height:10px;border-radius:50%;background:var(--bad)}
+.rec.on{background:var(--bad);color:#fff;box-shadow:0 0 0 5px rgba(239,68,68,.15)}
+.rec.on i{background:#fff;animation:pulse .8s infinite}
+.rule-link{height:40px;padding:0 12px;border-radius:12px;font-size:12px;font-weight:700;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+.bg-note{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+.rule{border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.rule.flash{animation:flash 1.2s}
+@keyframes flash{0%,60%{border-color:#a5b4fc;box-shadow:0 0 0 5px rgba(79,70,229,.12)}}
+.rule-h{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.rule-h b{font-size:14.5px}
+.rule .q{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+.fld{display:block;margin-bottom:12px}
+.fld>span{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.fld>span output{color:var(--brand)}
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.acts button{height:52px;border-radius:12px;border:1.5px solid var(--line);font-size:11.5px;font-weight:700;color:var(--ink2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.1}
+.acts button svg{width:16px;height:16px}
+.acts button.on{border-color:var(--brand);background:#eef2ff;color:var(--brand)}
+.txt{width:100%;height:38px;border-radius:10px;border:1px solid var(--line);padding:0 12px;font-size:13px;outline:none;background:var(--soft)}
+.txt:focus{background:#fff;border-color:#a5b4fc}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:9px;background:var(--soft);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:5px solid var(--brand);box-shadow:0 2px 6px rgba(79,70,229,.3);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:5px solid var(--brand)}
+select.txt{appearance:auto}
+.hint{font-size:12px;color:var(--muted);line-height:1.5}
+
+.sendcard{background:linear-gradient(135deg,#eef2ff,#e0f2fe);border:1px solid #dbe3fb}
+.prog{height:6px;border-radius:9px;background:rgba(255,255,255,.8);overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;width:0;background:var(--grad);transition:width .2s}
+
+.checklist{display:flex;flex-direction:column;gap:8px}
+.ck{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--soft);font-size:13.5px;font-weight:600}
+.ck .cki{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1.5px solid #d4dbe8;flex:none}
+.ck.done .cki{background:var(--ok);border-color:var(--ok);color:#fff}
+.ck .cki svg{width:13px;height:13px;opacity:0}
+.ck.done .cki svg{opacity:1}
+.ck span{flex:1}
+.ck button{font-size:12px;font-weight:700;color:var(--brand);padding:6px 10px;border-radius:8px;background:#fff}
+
+/* live panel */
+.drive-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.drive-top small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.drive-top b{font-size:20px;letter-spacing:-.02em}
+.estop{width:100%;height:58px;border-radius:16px;background:var(--bad);color:#fff;font-weight:800;font-size:17px;letter-spacing:.1em;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 22px rgba(239,68,68,.3)}
+.estop:active{transform:scale(.98)}
+.estop svg{width:22px;height:22px}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0}
+.toggle+.toggle{border-top:1px solid var(--line)}
+.toggle b{font-size:13.5px;display:block}
+.toggle small{font-size:12px;color:var(--muted)}
+.sw-t{position:relative;width:44px;height:26px;flex:none}
+.sw-t input{opacity:0;width:0;height:0;position:absolute}
+.sw-t i{position:absolute;inset:0;border-radius:99px;background:#d9dfea;transition:.2s;cursor:pointer}
+.sw-t i:after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.2s}
+.sw-t input:checked+i{background:var(--brand)}
+.sw-t input:checked+i:after{transform:translateX(18px)}
+.det-row{display:grid;grid-template-columns:12px 1fr 70px 40px;gap:10px;align-items:center;padding:8px 0;font-size:13px;font-weight:600}
+.det-row+.det-row{border-top:1px solid var(--line)}
+.det-row .t{height:6px;border-radius:9px;background:var(--soft);overflow:hidden}
+.det-row .t i{display:block;height:100%}
+.det-row small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+.det-row span:last-child{text-align:right;color:var(--muted);font-size:12px}
+.log{max-height:260px;overflow:auto;font-size:12.5px}
+.log-row{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.log-row time{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;padding-top:1px}
+.log-row.rule b{color:#b45309}
+.log-row.stop b,.log-row.estop b{color:var(--bad)}
+.log-row.system b{color:var(--brand)}
+.empty{font-size:13px;color:var(--muted);text-align:center;padding:18px 6px}
+.pad{position:relative;width:170px;height:170px;margin:6px auto 2px;border-radius:50%;background:radial-gradient(circle,#fff 0%,#f0f3fa 70%);border:1.5px solid var(--line);touch-action:none;user-select:none}
+.pad .knob{position:absolute;width:62px;height:62px;left:54px;top:54px;border-radius:50%;background:var(--grad);box-shadow:0 8px 18px rgba(79,70,229,.35)}
+.pad small{position:absolute;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.08em}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(2px);z-index:50;opacity:0;pointer-events:none;transition:.25s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:#fff;z-index:51;box-shadow:-20px 0 60px rgba(16,24,40,.14);transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.dr-h{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 10px}
+.dr-h h2{margin:0;font-size:19px}
+.dr-b{flex:1;overflow:auto;padding:6px 20px 24px}
+.dev{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;margin-bottom:10px}
+.dev .di{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:var(--soft);color:var(--brand);flex:none}
+.dev .di svg{width:22px;height:22px}
+.dev b{display:block;font-size:14.5px}
+.dev small{font-size:12px;color:var(--muted)}
+.dev .grow{flex:1;min-width:0}
+.dev.linked{border-color:#a7f3d0;background:#f0fdf8}
+.scan{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:6px 0 14px}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid #dbe2f0;border-top-color:var(--brand);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.kv span{color:var(--muted)}
+.kv input{border:1px solid var(--line);border-radius:8px;height:30px;padding:0 10px;text-align:right;width:170px}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:18px;background:rgba(15,23,42,.32);backdrop-filter:blur(3px)}
+.mc{background:#fff;border-radius:26px;width:min(560px,100%);max-height:92vh;overflow:auto;padding:26px;box-shadow:0 30px 80px rgba(16,24,40,.25)}
+.mc h2{margin:0 0 4px;font-size:22px;letter-spacing:-.02em}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.sum div{background:var(--soft);border-radius:14px;padding:12px}
+.sum b{display:block;font-size:20px;letter-spacing:-.02em}
+.sum small{font-size:11.5px;color:var(--muted);font-weight:600}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);margin-top:8px;cursor:pointer}
+.chk input{margin-top:2px;accent-color:var(--brand)}
+.chk small{display:block;color:var(--muted);font-size:12px}
+.mc-f{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+
+.toasts{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:92vw}
+.toast{background:#0f172a;color:#fff;padding:11px 16px;border-radius:14px;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.2);display:flex;align-items:center;gap:9px;animation:tin .25s}
+.toast i{width:8px;height:8px;border-radius:50%;background:#818cf8;flex:none}
+.toast.ok i{background:var(--ok)}.toast.warn i{background:var(--warn)}.toast.bad i{background:var(--bad)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+
+@media (max-width:1020px){
+  .hero{grid-template-columns:1fr;gap:40px}
+  .hero-art{max-width:560px}
+  .feats{grid-template-columns:1fr 1fr}
+  .layout{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .wrap{padding:0 18px}
+  .roles,.feats,.steps,.foot{grid-template-columns:1fr}
+  .f1{left:8px;bottom:-20px}.f2{right:8px;top:-16px}
+  .bar{grid-template-columns:auto auto auto;justify-content:space-between;padding:0 10px;gap:6px}
+  .bar .logo-slot{max-width:26px;overflow:hidden}
+  #endBtn{width:38px;padding:0!important}
+  .bar .brand b,.role-tag,#endTxt,.pill span{display:none}
+  .seg{justify-self:center}
+  .seg button{padding:0 12px}
+  .pill{padding:0 10px}
+  .layout{padding:10px;gap:12px}
+  .stage{aspect-ratio:4/3;border-radius:18px}
+  .gauge{width:84px;height:84px}.gauge .gv b{font-size:22px}
+  .sum{grid-template-columns:1fr 1fr}
+}
+@media (orientation:landscape) and (max-height:520px){
+  .layout{grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr)}
+  .stage{aspect-ratio:auto;height:calc(100vh - 140px)}
+}
+</style>
+</head>
+<body>
+
+<!-- ======================= SVG ICONS ======================= -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="11" rx="2"/><path d="M2 19h20"/></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3l2-3h8l2 3h3v12H3z"/><path d="M9 13a3 3 0 0 1 5-2l1 1M15 13a3 3 0 0 1-5 2l-1-1"/></symbol>
+    <symbol id="i-mirror" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7zM16 7l5 5-5 5V7z"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M7 8 12 3l5 5H7zM7 16l5 5 5-5H7z"/></symbol>
+    <symbol id="i-rot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-bt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.7l-12-7.5A1 1 0 0 0 7 4.5z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M8 2h8l6 6v8l-6 6H8l-6-6V8z"/><path d="M8 12h8" stroke-linecap="round"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M7 14l5-5 5 5M4 3h16"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-rules" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M4 12h16M4 18h7"/><circle cx="17" cy="6" r="2"/><circle cx="14" cy="18" r="2"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.3 19a10 10 0 1 1 17.4 0"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3l2-3h8l2 3h3v12H3z"/><circle cx="12" cy="13" r="4"/></symbol>
+  </defs>
+</svg>
+
+<!-- ======================= LANDING ======================= -->
+<section id="landing">
+  <div class="wrap">
+    <nav class="lnav">
+      <div class="brand"><span class="logo-slot"></span><span class="div"></span><b>Cogno Pilot</b></div>
+      <a href="#how">How it works</a>
+    </nav>
+
+    <div class="hero">
+      <div>
+        <span class="eyebrow"><i></i>AI autonomous vehicle</span>
+        <h1>Teach your car to <span class="gt">see the road.</span></h1>
+        <p class="lead">Train road signs on your laptop, send them to the phone on your car, and watch it drive itself. It slows down in school zones and stops at zebra crossings, following rules you set.</p>
+        <div class="roles">
+          <button class="role" data-role="vehicle">
+            <span class="ri"><svg><use href="#i-phone"/></svg></span>
+            <span><b>Vehicle</b><small>Phone mounted on the car</small></span>
+          </button>
+          <button class="role alt" data-role="controller">
+            <span class="ri"><svg><use href="#i-laptop"/></svg></span>
+            <span><b>Control Station</b><small>Laptop to train &amp; monitor</small></span>
+          </button>
+        </div>
+        <div class="fleet">Fleet code <input id="roomIn" maxlength="16" spellcheck="false"> <span>Use the same code on both devices</span></div>
+      </div>
+
+      <div class="hero-art">
+        <div class="frame">
+          <svg viewBox="0 0 560 400" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dbeafe"/><stop offset="1" stop-color="#f8fbff"/></linearGradient>
+              <linearGradient id="road" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cbd5e1"/><stop offset="1" stop-color="#94a3b8"/></linearGradient>
+              <linearGradient id="bx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient>
+            </defs>
+            <rect width="560" height="400" fill="url(#sky)"/>
+            <circle cx="470" cy="70" r="34" fill="#fde68a" opacity=".8"/>
+            <path d="M0 210 Q140 170 280 200 T560 190 V400 H0z" fill="#d1fae5"/>
+            <path d="M230 200 L330 200 L520 400 L40 400z" fill="url(#road)"/>
+            <path d="M280 205 v20 M280 245 v28 M280 300 v40" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            <g fill="#fff" opacity=".95">
+              <path d="M150 330 h40 l-6 30 h-46z"/><path d="M205 330 h40 l-2 30 h-44z"/><path d="M260 330 h40 l2 30 h-44z"/><path d="M315 330 h40 l6 30 h-46z"/><path d="M370 330 h40 l10 30 h-46z"/>
+            </g>
+            <rect x="404" y="140" width="6" height="110" rx="3" fill="#64748b"/>
+            <rect x="376" y="88" width="62" height="62" rx="8" transform="rotate(45 407 119)" fill="#facc15" stroke="#1f2937" stroke-width="3"/>
+            <g fill="#1f2937"><circle cx="400" cy="104" r="5"/><circle cx="415" cy="108" r="4"/><path d="M394 112 l-6 22 h5 l3-9 3 9h5zM411 115 l-4 17 h4 l2-7 2 7 h4z"/></g>
+            <rect x="358" y="64" width="98" height="110" rx="12" fill="none" stroke="url(#bx)" stroke-width="3.5" stroke-dasharray="0"/>
+            <rect x="358" y="40" width="110" height="24" rx="8" fill="url(#bx)"/>
+            <text x="368" y="57" font-family="Plus Jakarta Sans,Arial" font-size="13" font-weight="700" fill="#fff">School sign 94%</text>
+            <rect x="122" y="318" width="316" height="54" rx="10" fill="none" stroke="#10b981" stroke-width="3"/>
+            <rect x="122" y="296" width="132" height="22" rx="7" fill="#10b981"/>
+            <text x="131" y="312" font-family="Plus Jakarta Sans,Arial" font-size="12.5" font-weight="700" fill="#fff">Zebra crossing 88%</text>
+          </svg>
+        </div>
+        <div class="float f1"><span class="fi" style="background:#fff7e6;color:#b45309"><svg width="18" height="18"><use href="#i-gauge"/></svg></span><span>Speed capped at 40%<small>School zone rule</small></span></div>
+        <div class="float f2"><span class="fi" style="background:#ecfdf5;color:#047857"><svg width="18" height="18"><use href="#i-link"/></svg></span><span>Laptop linked<small>Live view streaming</small></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:20px">
+    <div class="wrap">
+      <div class="sec-h"><span class="kicker">Built for real roads (and classrooms)</span><h2>Everything an autonomous car needs</h2><p>Vision on the phone, control on the ESP32, and your laptop as mission control.</p></div>
+      <div class="feats">
+        <div class="feat"><div class="fi" style="background:#eef2ff;color:#4f46e5"><svg><use href="#i-eye"/></svg></div><h3>Teach by showing</h3><p>Hold a sign up to the camera for a few seconds. Cogno Pilot learns its shape and colours, plus any words printed on it.</p></div>
+        <div class="feat"><div class="fi" style="background:#fff7e6;color:#d97706"><svg><use href="#i-rules"/></svg></div><h3>Rules you decide</h3><p>School zone? Cap speed at 40%. Zebra crossing? Stop for 3 seconds, then go. Every object gets its own rule.</p></div>
+        <div class="feat"><div class="fi" style="background:#ecfeff;color:#0891b2"><svg><use href="#i-chip"/></svg></div><h3>The phone is the brain</h3><p>Google MediaPipe vision runs on the phone itself. The car gets drive commands over Bluetooth and its status shows on the LCD.</p></div>
+        <div class="feat"><div class="fi" style="background:#ecfdf5;color:#059669"><svg><use href="#i-laptop"/></svg></div><h3>Mission control</h3><p>Pair over Wi-Fi with one tap. Stream the car's view live, switch modes and take over whenever you want.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="how" style="padding-top:10px">
+    <div class="wrap">
+      <div class="sec-h"><span class="kicker">How it works</span><h2>From zero to self-driving in three steps</h2></div>
+      <div class="steps">
+        <div class="step"><h3>Open on both devices</h3><p>Choose <b>Vehicle</b> on the phone and <b>Control Station</b> on the laptop, using the same fleet code. The phone shows up on the laptop right away.</p></div>
+        <div class="step"><h3>Train objects &amp; set rules</h3><p>Record samples of each sign with the laptop camera, add the text printed on it, and choose what the car should do when it sees it.</p></div>
+        <div class="step"><h3>Send &amp; go live</h3><p>Send the training to the vehicle and switch to Live. The car drives on its own while you watch its camera with every detection marked.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <div class="brand" style="margin-bottom:12px"><span class="logo-slot"></span><span class="div"></span><b>Cogno Pilot</b></div>
+          <p class="muted" style="max-width:340px">An AI autonomous vehicle platform by Cognospace. Train, set rules and drive with nothing but a phone, a laptop and an ESP32.</p>
+        </div>
+        <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li>Train mode</li><li>Live mode</li></ul></div>
+        <div><h4>Runs on</h4><ul><li>Chrome · Android</li><li>Google MediaPipe</li><li>ESP32 · Bluetooth LE</li></ul></div>
+      </div>
+      <div class="foot-b"><span>© 2026 Cognospace. All rights reserved.</span><span>Camera frames are processed on your devices.</span></div>
+    </div>
+  </footer>
+</section>
+
+<!-- ======================= APP ======================= -->
+<section id="app" hidden>
+  <header class="bar">
+    <div class="brand"><span class="logo-slot sm"></span><b>Cogno Pilot</b><span class="role-tag" id="roleTag">Vehicle</span></div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="train" class="on"><i></i>Train</button>
+      <button data-mode="live"><i></i>Live</button>
+    </div>
+    <div class="bar-r">
+      <button class="pill" id="blePill" hidden title="Car (Bluetooth)"><i class="dot" id="bleDot"></i><svg><use href="#i-bt"/></svg><span id="bleTxt">Car</span></button>
+      <button class="pill" id="linkPill" title="Devices"><i class="dot" id="linkDot"></i><svg><use href="#i-link"/></svg><span id="linkTxt">Not linked</span></button>
+      <button class="btn ghost danger" id="endBtn" style="height:38px;padding:0 12px"><svg><use href="#i-x"/></svg><span id="endTxt">End session</span></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="stage-col">
+      <div class="stage" id="stage">
+        <video id="cam" playsinline muted autoplay></video>
+        <video id="remote" playsinline muted autoplay hidden></video>
+        <canvas id="overlay"></canvas>
+
+        <div class="hud" id="hud" hidden>
+          <div class="hud-tl"><span class="chip" id="modeChip"><i style="background:#94a3b8"></i>Paused</span><span class="chip" id="ruleChip" hidden></span></div>
+          <div class="gauge">
+            <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="none" stroke="#eef1f8" stroke-width="9"/><circle id="gCap" cx="50" cy="50" r="42" fill="none" stroke="#fde68a" stroke-width="9" stroke-dasharray="263.9" stroke-dashoffset="0"/><circle id="gArc" cx="50" cy="50" r="42" fill="none" stroke="url(#gg)" stroke-width="9" stroke-linecap="round" stroke-dasharray="263.9" stroke-dashoffset="263.9" style="transition:stroke-dashoffset .25s"/><defs><linearGradient id="gg"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs></svg>
+            <div class="gv"><b id="gVal">0</b><small id="gSub">SPEED %</small></div>
+          </div>
+          <div class="hud-b"><div id="signChip"></div><span class="chip ocr-chip" id="ocrChip" hidden></span></div>
+        </div>
+
+        <div class="banner" id="ctrlBanner" hidden><i class="dot on"></i><span id="ctrlTxt"></span></div>
+
+        <div class="stage-empty" id="stageEmpty" hidden>
+          <div><div class="ei"><svg><use href="#i-cam"/></svg></div><b id="emptyT">Camera is off</b><p id="emptyP">Allow camera access to continue.</p><button class="btn primary" id="emptyBtn">Turn on camera</button></div>
+        </div>
+
+        <div class="gate" id="bleGate" hidden>
+          <div class="gc">
+            <div class="ei" style="width:56px;height:56px;border-radius:18px;background:var(--grad);color:#fff;display:grid;place-items:center;margin:0 auto"><svg width="26" height="26"><use href="#i-bt"/></svg></div>
+            <b>Connect the car</b>
+            <p>Live mode was switched on. Tap below to connect over Bluetooth so Cogno Pilot can drive the motors.</p>
+            <button class="btn primary block" id="gatePair">Connect car</button>
+            <button class="btn soft block" id="gateSkip" style="margin-top:8px">Run without car (preview)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="camtools">
+        <button class="icon-btn" data-cam="power" title="Turn camera off"><svg><use href="#i-power"/></svg></button>
+        <button class="icon-btn" data-cam="switch" title="Switch camera"><svg><use href="#i-switch"/></svg></button>
+        <button class="icon-btn" data-cam="mirror" title="Mirror view"><svg><use href="#i-mirror"/></svg></button>
+        <button class="icon-btn" data-cam="flip" title="Flip upside down"><svg><use href="#i-flip"/></svg></button>
+        <button class="icon-btn" data-cam="rot" title="Rotate 180°"><svg><use href="#i-rot"/></svg></button>
+        <span class="sp"></span>
+        <span class="stat" id="camLbl"><svg width="14" height="14"><use href="#i-cam"/></svg><span>Camera</span></span>
+        <span class="stat" id="aiStat"><i class="dot wait"></i><span>Loading AI…</span></span>
+        <span class="stat mono" id="fpsStat" hidden>0 fps</span>
+      </div>
+
+      <div class="predict" id="predict">
+        <div class="ph"><span>Live prediction</span><b id="predTop">–</b></div>
+        <div id="predBars"><div class="empty" style="padding:6px">Add objects and record samples to see predictions here.</div></div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <!-- vehicle setup checklist -->
+      <div class="card" id="setupCard" hidden>
+        <h3>Vehicle setup</h3>
+        <p class="sub">Finish these before you mount the phone on the car.</p>
+        <div class="checklist">
+          <div class="ck" id="ckCam"><span class="cki"><svg><use href="#i-check"/></svg></span><span>Camera on</span></div>
+          <div class="ck" id="ckBle"><span class="cki"><svg><use href="#i-check"/></svg></span><span>Car connected (Bluetooth)</span><button id="ckBleBtn">Connect</button></div>
+          <div class="ck" id="ckLink"><span class="cki"><svg><use href="#i-check"/></svg></span><span id="ckLinkTxt">Waiting for Control Station</span></div>
+        </div>
+      </div>
+
+      <!-- vehicle linked & train -->
+      <div class="card" id="linkedTrainCard" hidden>
+        <h3><i class="dot on"></i> <span id="ltTitle">Linked</span></h3>
+        <p class="sub" id="ltSub">Training happens on the Control Station. New objects and rules arrive here when they're sent.</p>
+        <div class="kv"><span>Objects learned</span><b id="ltObjs">0</b></div>
+        <div class="kv"><span>Samples</span><b id="ltSamples">0</b></div>
+        <div class="kv" style="border:0"><span>Last update</span><b id="ltWhen">–</b></div>
+        <button class="btn ghost block" id="unlinkBtn" style="margin-top:12px">Unlink</button>
+      </div>
+
+      <!-- TRAIN -->
+      <div id="trainPanel">
+        <div class="card">
+          <div class="tabs" id="trainTabs">
+            <button data-tab="objects" class="on"><svg width="15" height="15"><use href="#i-eye"/></svg>Objects</button>
+            <button data-tab="rules"><svg width="15" height="15"><use href="#i-rules"/></svg>Rules <span class="badge" id="ruleBadge" hidden>0</span></button>
+          </div>
+          <div id="tabObjects">
+            <div class="addrow"><input id="newCls" placeholder="Name an object, e.g. School sign" maxlength="28"><button class="btn primary" id="addCls" style="padding:0 16px">Add</button></div>
+            <div id="clsList"></div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn soft" id="exportBtn" style="flex:1;height:38px;font-size:13px"><svg><use href="#i-down"/></svg>Export</button>
+              <button class="btn soft" id="importBtn" style="flex:1;height:38px;font-size:13px"><svg><use href="#i-up"/></svg>Import</button>
+              <input type="file" id="importFile" accept=".json,application/json" hidden>
+            </div>
+          </div>
+          <div id="tabRules" hidden>
+            <p class="sub">Tell Cogno Pilot what to do when it sees each object.</p>
+            <div id="ruleList"></div>
+            <div class="fld" style="margin-top:14px;margin-bottom:0">
+              <span>Add a rule for a built-in object</span>
+              <div style="display:flex;gap:8px"><select class="txt" id="builtinSel"></select><button class="btn soft" id="addBuiltin" style="height:38px">Add</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card sendcard" id="sendCard" hidden>
+          <h3><svg width="17" height="17"><use href="#i-send"/></svg> Send to vehicle</h3>
+          <p class="sub" id="sendSub" style="margin-bottom:12px">Link a vehicle to send your objects and rules.</p>
+          <button class="btn primary block" id="sendBtn" disabled><svg><use href="#i-send"/></svg><span id="sendTxt">Send training</span></button>
+          <div class="prog" id="sendProg" hidden><i></i></div>
+        </div>
+      </div>
+
+      <!-- LIVE -->
+      <div id="livePanel" hidden>
+        <div class="card">
+          <div class="drive-top">
+            <div><small>Autopilot</small><b id="apState">Paused</b></div>
+            <button class="btn primary" id="apBtn" style="height:46px;padding:0 20px"><svg><use href="#i-play"/></svg><span>Start</span></button>
+          </div>
+          <button class="estop" id="estopBtn"><svg><use href="#i-stop"/></svg>EMERGENCY STOP</button>
+          <p class="hint" id="liveHint" style="margin:10px 0 0">Space = stop · Arrow keys / WASD = drive by hand</p>
+        </div>
+
+        <div class="card">
+          <label class="fld"><span>Cruise speed <output id="cruiseOut">60%</output></span><input type="range" id="cruise" min="20" max="100" step="5"></label>
+          <label class="fld" style="margin-bottom:0"><span>Steering trim <output id="trimOut">0</output></span><input type="range" id="trim" min="-25" max="25" step="1"></label>
+          <p class="hint" style="margin:6px 0 0">Use trim if the car drifts to one side when driving straight.</p>
+        </div>
+
+        <div class="card" style="padding:8px 16px">
+          <div class="toggle"><div><b>Object detector</b><small>People, cars, stop signs, lights</small></div><label class="sw-t"><input type="checkbox" id="tDet"><i></i></label></div>
+          <div class="toggle"><div><b>Read sign text</b><small>Matches the words you saved for each object</small></div><label class="sw-t"><input type="checkbox" id="tOcr"><i></i></label></div>
+          <div class="toggle"><div><b>Obstacle guard</b><small>Stops if a person or object is close ahead</small></div><label class="sw-t"><input type="checkbox" id="tGuard"><i></i></label></div>
+        </div>
+
+        <div class="card">
+          <div class="tabs" id="liveTabs">
+            <button data-tab="dets" class="on">Detections</button>
+            <button data-tab="log">Event log</button>
+            <button data-tab="manual">Manual</button>
+          </div>
+          <div id="tabDets"><div id="detList"><div class="empty">Nothing detected yet</div></div></div>
+          <div id="tabLog" hidden><div class="log" id="logList"><div class="empty">Events will appear here</div></div></div>
+          <div id="tabManual" hidden>
+            <p class="sub" style="text-align:center">Hold and drag to drive. This overrides autopilot while you hold it.</p>
+            <div class="pad" id="pad"><small style="top:8px;left:50%;transform:translateX(-50%)">FWD</small><small style="bottom:8px;left:50%;transform:translateX(-50%)">BACK</small><small style="left:10px;top:50%;transform:translateY(-50%)">L</small><small style="right:10px;top:50%;transform:translateY(-50%)">R</small><div class="knob" id="knob"></div></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</section>
+
+<!-- ======================= DRAWER ======================= -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="dr-h"><h2 id="drTitle">Devices</h2><button class="icon-btn" id="drClose"><svg><use href="#i-x"/></svg></button></div>
+  <div class="dr-b" id="drBody"></div>
+</aside>
+
+<!-- ======================= END MODAL ======================= -->
+<div class="modal" id="endModal" hidden>
+  <div class="mc">
+    <h2>End this session?</h2>
+    <p class="muted" style="margin:0;font-size:14px">Here's a summary of this session.</p>
+    <div class="sum" id="sumGrid"></div>
+    <div id="sumRules"></div>
+    <label class="chk" id="endRemoteRow"><input type="checkbox" id="endRemote" checked><span><b>End on the vehicle too</b><small>Stops the car and ends the session on <span id="endRemoteName">the vehicle</span>.</small></span></label>
+    <label class="chk"><input type="checkbox" id="wipeChk"><span><b>Erase data from this device</b><small>Deletes trained objects, rules and settings. Export first if you want to keep them.</small></span></label>
+    <div class="mc-f">
+      <button class="btn ghost" id="logDl"><svg><use href="#i-down"/></svg>Download log</button>
+      <span style="flex:1"></span>
+      <button class="btn soft" id="endCancel">Cancel</button>
+      <button class="btn primary" id="endConfirm" style="background:var(--bad);box-shadow:0 6px 18px rgba(239,68,68,.3)">End session</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script type="module">
+/* =====================================================================
+   COGNO PILOT  ·  AI Autonomous Vehicle  ·  by Cognospace
+   One file for both devices:
+     Vehicle (phone on car): camera + MediaPipe + rules engine + BLE to ESP32
+     Control Station (laptop): training, rules, live view, remote control
+   ===================================================================== */
+import {FilesetResolver, ImageEmbedder, ObjectDetector} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+/* ---------- PUT YOUR COGNOSPACE LOGO HERE ----------
+   A URL ("logo.png" next to this file) or a data:image/... string. Empty = text wordmark. */
+const COGNOSPACE_LOGO = "cognospace-logo.png";
+
+const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+const EMB_MODEL = "https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite";
+const DET_MODEL = "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite";
+const SVC = "6e400001-b5a3-f393-e0a9-e50e24dcca9e", RXU = "6e400002-b5a3-f393-e0a9-e50e24dcca9e", TXU = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+const MAX_SLOTS = 8, MAX_SAMPLES = 120;
+const COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#0ea5e9','#ec4899','#8b5cf6','#84cc16','#f97316','#14b8a6'];
+const BUILTIN = ['person','stop sign','traffic light','car','bicycle','motorcycle','bus','truck','dog','cat'];
+const GUARD = ['person','car','bicycle','motorcycle','bus','truck','dog','cat','chair','bench'];
+const PEER_OPTS = {debug:1, config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}]}};
+const isMobile = /Android|iPhone|iPad|Mobi/i.test(navigator.userAgent);
+
+/* ---------- helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s), $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const LS = {
+  get(k, d){ try { const v = localStorage.getItem('cgp.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem('cgp.' + k, JSON.stringify(v)); } catch { toast('Device storage is full. Export and remove some samples.', 'bad'); } },
+  del(k){ localStorage.removeItem('cgp.' + k); }
+};
+function toast(msg, kind=''){
+  const t = document.createElement('div'); t.className = 'toast ' + kind; t.innerHTML = `<i></i>${esc(msg)}`;
+  $('#toasts').appendChild(t); setTimeout(() => { t.style.transition = '.3s'; t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 3200);
+}
+const fmtDur = ms => { const s = Math.round(ms/1000), m = Math.floor(s/60); return m ? `${m}m ${s%60}s` : `${s}s`; };
+const fmtTime = t => new Date(t).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+const ago = t => { if(!t) return '–'; const s = (Date.now()-t)/1000; return s < 60 ? 'just now' : s < 3600 ? Math.round(s/60)+' min ago' : new Date(t).toLocaleString(); };
+
+/* ---------- logo ---------- */
+const WORDMARK = `<span class="wm"><svg viewBox="0 0 32 32"><defs><linearGradient id="wmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs><circle cx="16" cy="16" r="7" fill="url(#wmg)"/><ellipse cx="16" cy="16" rx="14" ry="6" fill="none" stroke="url(#wmg)" stroke-width="2" transform="rotate(-25 16 16)"/></svg>COGNOSPACE</span>`;
+function renderLogos(){ $$('.logo-slot').forEach(el => el.innerHTML = COGNOSPACE_LOGO ? `<img src="${COGNOSPACE_LOGO}" alt="Cognospace">` : WORDMARK); }
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const S = {
+  role: null, mode: 'train', room: LS.get('room', 'cognospace'),
+  name: '', settings: Object.assign({cruise:60, trim:0, detector:true, ocr:false, guard:true, guardArea:10}, LS.get('settings', {})),
+  remote: null, session: null, synced: 0, lastSent: 0, previewNoCar: false
+};
+const camEl = $('#cam'), remoteEl = $('#remote'), overlay = $('#overlay'), stage = $('#stage');
+
+/* =====================================================================
+   MODEL  ·  custom objects (KNN on MediaPipe image embeddings) + rules
+   ===================================================================== */
+function defaultRule(name){
+  const n = name.toLowerCase();
+  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:70, lcd:(lcd || name).toUpperCase().slice(0, 20)});
+  if (/school|child|kid/.test(n)) return R('limit', 40, 6, 'SCHOOL ZONE - SLOW');
+  if (/zebra|crossing|pedestrian|walk/.test(n)) return R('stopgo', 3, 0, 'ZEBRA CROSSING');
+  if (/person/.test(n)) return R('stop', 0, 1, 'PERSON AHEAD');
+  if (/stop/.test(n)) return R('stopgo', 3, 0, 'STOP SIGN');
+  if (/hospital/.test(n)) return R('limit', 40, 6, 'HOSPITAL - SLOW');
+  if (/hump|bump|breaker/.test(n)) return R('limit', 30, 3, 'SPEED BREAKER');
+  if (/red/.test(n)) return R('stop', 0, 1, 'RED LIGHT - STOP');
+  if (/green/.test(n)) return R('ignore', 100, 0, 'GREEN - GO');
+  if (/speed|limit/.test(n)) return R('limit', 50, 8, 'SPEED LIMIT');
+  if (/turn|curve|bend/.test(n)) return R('limit', 50, 4, 'CURVE AHEAD');
+  if (/traffic light/.test(n)) return R('limit', 40, 3, 'TRAFFIC LIGHT');
+  return R('limit', 60, 4);
+}
+function describeRule(r){
+  if (!r) return 'No rule';
+  return r.action === 'limit' ? `Limit to ${r.value}%` : r.action === 'stopgo' ? `Stop ${r.value}s, then go` : r.action === 'stop' ? 'Stop while visible' : 'Ignore';
+}
+function b64enc(u8){ let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+function b64dec(b){ const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+function packVecs(vecs){
+  if (!vecs.length) return {dim:0, n:0, b64:''};
+  const dim = vecs[0].length, out = new Int8Array(dim * vecs.length);
+  vecs.forEach((v, i) => { let m = 1e-9; for (const x of v) m = Math.max(m, Math.abs(x)); for (let j = 0; j < dim; j++) out[i*dim + j] = Math.round(v[j] / m * 127); });
+  return {dim, n:vecs.length, b64:b64enc(new Uint8Array(out.buffer))};
+}
+function unpackVecs(p){
+  if (!p || !p.n) return [];
+  const u = b64dec(p.b64), i8 = new Int8Array(u.buffer, u.byteOffset, u.length), res = [];
+  for (let i = 0; i < p.n; i++){
+    const v = new Float32Array(p.dim); let s = 0;
+    for (let j = 0; j < p.dim; j++){ v[j] = i8[i*p.dim + j]; s += v[j]*v[j]; }
+    s = Math.sqrt(s) || 1; for (let j = 0; j < p.dim; j++) v[j] /= s; res.push(v);
+  }
+  return res;
+}
+const Model = {
+  classes: [], builtin: {}, ema: new Map(), updatedAt: 0,
+  byId(id){ return this.classes.find(c => c.id === id); },
+  total(){ return this.classes.reduce((a, c) => a + c.vecs.length, 0); },
+  learned(){ return this.classes.filter(c => !c.bg && c.vecs.length).length; },
+  add(name, bg=false){
+    const c = {id:uid(), name, bg, color: bg ? '#94a3b8' : COLORS[this.classes.filter(x => !x.bg).length % COLORS.length], keywords:'', rule: bg ? null : defaultRule(name), vecs:[], thumbs:[]};
+    this.classes.push(c); this.changed(); return c;
+  },
+  remove(id){ this.classes = this.classes.filter(c => c.id !== id); this.changed(); },
+  toJSON(maxThumbs=8){
+    return {v:1, at:this.updatedAt || Date.now(), builtin:this.builtin,
+      classes:this.classes.map(c => ({id:c.id, name:c.name, bg:c.bg, color:c.color, keywords:c.keywords, rule:c.rule, thumbs:c.thumbs.slice(0, maxThumbs), vecs:packVecs(c.vecs)}))};
+  },
+  load(j){
+    if (!j || !Array.isArray(j.classes)) return false;
+    this.classes = j.classes.map(c => ({...c, keywords:c.keywords || '', thumbs:c.thumbs || [], vecs:unpackVecs(c.vecs)}));
+    this.builtin = j.builtin || {}; this.updatedAt = j.at || Date.now(); this.ema.clear();
+    if (!this.classes.some(c => c.bg)) this.classes.unshift({id:uid(), name:'Clear road', bg:true, color:'#94a3b8', keywords:'', rule:null, vecs:[], thumbs:[]});
+    return true;
+  },
+  save(){ LS.set('dataset', this.toJSON(8)); },
+  changed(){ this.updatedAt = Date.now(); this.save(); renderSend(); },
+  reset(){ this.classes = []; this.builtin = {}; this.add('Clear road', true); },
+  predict(v){
+    const K = 7, top = [];
+    this.classes.forEach((c, ci) => { for (const s of c.vecs){
+      let d = 0; for (let j = 0; j < v.length; j++) d += v[j]*s[j];
+      if (top.length < K) { top.push({d, ci}); top.sort((a, b) => b.d - a.d); }
+      else if (d > top[K-1].d) { top[K-1] = {d, ci}; top.sort((a, b) => b.d - a.d); }
+    }});
+    if (!top.length) return null;
+    const score = new Array(this.classes.length).fill(0), best = new Array(this.classes.length).fill(-1); let tot = 0;
+    for (const t of top){ const w = Math.max(0.001, t.d); score[t.ci] += w; tot += w; best[t.ci] = Math.max(best[t.ci], t.d); }
+    const list = this.classes.map((c, ci) => ({c, p:score[ci]/tot, sim:best[ci]})).sort((a, b) => b.p - a.p);
+    return {list, top:list[0]};
+  },
+  classify(v){            // smoothed over time for driving
+    const r = this.predict(v); if (!r) return null;
+    for (const c of this.classes){ const it = r.list.find(x => x.c === c); const p = it ? it.p : 0; this.ema.set(c.id, (this.ema.get(c.id) ?? p)*0.55 + p*0.45); }
+    let bestC = null, bestP = -1; for (const c of this.classes){ const p = this.ema.get(c.id); if (p > bestP) { bestP = p; bestC = c; } }
+    const sim = r.list.find(x => x.c === bestC)?.sim ?? 0;
+    return {c:bestC, p:bestP, sim};
+  }
+};
+
+/* =====================================================================
+   AI  ·  Google MediaPipe Tasks (image embedder + object detector)
+   ===================================================================== */
+const AI = {
+  ready:false, loading:null, embedder:null, detector:null,
+  init(){
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      setAI('wait', 'Loading AI…');
+      try {
+        const vision = await FilesetResolver.forVisionTasks(WASM);
+        const make = async (Task, opts) => {
+          try { return await Task.createFromOptions(vision, {...opts, baseOptions:{...opts.baseOptions, delegate:'GPU'}}); }
+          catch { return await Task.createFromOptions(vision, {...opts, baseOptions:{...opts.baseOptions, delegate:'CPU'}}); }
+        };
+        this.embedder = await make(ImageEmbedder, {baseOptions:{modelAssetPath:EMB_MODEL}, runningMode:'IMAGE', l2Normalize:true, quantize:false});
+        setAI('wait', 'Loading detector…');
+        this.detector = await make(ObjectDetector, {baseOptions:{modelAssetPath:DET_MODEL}, runningMode:'IMAGE', scoreThreshold:0.45, maxResults:8});
+        this.ready = true; setAI('on', 'AI ready');
+      } catch (e) {
+        console.error(e); setAI('bad', 'AI failed to load'); toast('Could not load the AI models. Check the internet connection.', 'bad'); this.loading = null;
+      }
+    })();
+    return this.loading;
+  },
+  embed(src){ const r = this.embedder.embed(src); return Float32Array.from(r.embeddings[0].floatEmbedding); },
+  detect(src){
+    const r = this.detector.detect(src);
+    return r.detections.map(d => ({label:d.categories[0].categoryName, score:d.categories[0].score,
+      box:{x:d.boundingBox.originX/src.width, y:d.boundingBox.originY/src.height, w:d.boundingBox.width/src.width, h:d.boundingBox.height/src.height}}));
+  }
+};
+function setAI(state, txt){ const el = $('#aiStat'); el.querySelector('.dot').className = 'dot ' + state; el.querySelector('span').textContent = txt; }
+
+/* =====================================================================
+   CAMERA
+   ===================================================================== */
+const Cam = Object.assign({stream:null, facing:'environment', devs:[], mirror:false, flipV:false, rot:false}, LS.get('cam', {}));
+Cam.start = async function(facing){ if (facing) this.facing = facing; return this.open({facingMode:{ideal:this.facing}}); };
+Cam.open = async function(vc){
+  this.stream?.getTracks().forEach(t => t.stop());
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({audio:false, video:{...vc, width:{ideal:1280}, height:{ideal:720}}});
+    this.stream = s; camEl.srcObject = s; await camEl.play().catch(() => {});
+    this.devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const tr = s.getVideoTracks()[0]; Link.replaceTrack(tr);
+    const fm = tr.getSettings().facingMode; if (fm) this.facing = fm === 'user' ? 'user' : 'environment';
+    $('#camLbl span').textContent = isMobile ? (this.facing === 'user' ? 'Front camera' : 'Back camera') : (tr.label || 'Camera').replace(/\s*\(.*\)/, '').slice(0, 22);
+  } catch (e) {
+    this.stream = null; console.warn(e);
+    toast(e.name === 'NotAllowedError' ? 'Camera permission was blocked. Allow it in the browser settings.' : 'Camera error: ' + (e.message || e.name), 'bad');
+  }
+  updateStage(); renderSetup();
+};
+Cam.switch = async function(){
+  if (isMobile || this.devs.length < 2){ this.facing = this.facing === 'environment' ? 'user' : 'environment'; await this.open({facingMode:{ideal:this.facing}}); }
+  else {
+    const cur = this.stream?.getVideoTracks()[0]?.getSettings().deviceId;
+    let i = this.devs.findIndex(d => d.deviceId === cur); i = (i + 1) % this.devs.length;
+    await this.open({deviceId:{exact:this.devs[i].deviceId}});
+  }
+};
+Cam.stop = function(){ this.stream?.getTracks().forEach(t => t.stop()); this.stream = null; camEl.srcObject = null; updateStage(); renderSetup(); };
+Cam.power = async function(on){
+  if (on){ await this.start(); if (this.stream){ logEvent('system', 'Camera turned on'); if (S.role === 'vehicle' && Link.linked && !Link.call) Link.startCall(Link.linked.peer); } return; }
+  this.stop(); logEvent('system', 'Camera turned off');
+  if (Engine.ap){ Engine.handle({k:'ap', on:false}); toast('Camera off. Autopilot paused because the car cannot see.', 'warn'); }
+  else toast('Camera off');
+};
+Cam.css = c => `scale(${(c.mirror?-1:1)*(c.rot?-1:1)},${(c.flipV?-1:1)*(c.rot?-1:1)})`;
+Cam.apply = function(){ camEl.style.transform = Cam.css(this); LS.set('cam', {mirror:this.mirror, flipV:this.flipV, rot:this.rot}); renderCamTools(); };
+Cam.action = function(a){
+  if (a === 'power') return this.power(!this.stream);
+  if (a === 'switch') return this.stream ? this.switch() : this.power(true);
+  if (a === 'mirror') this.mirror = !this.mirror;
+  if (a === 'flip') this.flipV = !this.flipV;
+  if (a === 'rot') this.rot = !this.rot;
+  this.apply();
+};
+Cam.info = function(){ return {mirror:this.mirror, flipV:this.flipV, rot:this.rot, facing:this.facing, off:!this.stream}; };
+
+/* frame grabbing: rotate/flip go into the AI input, mirror is display-only */
+const proc = document.createElement('canvas'), pctx = proc.getContext('2d', {willReadFrequently:true});
+const ocrCv = document.createElement('canvas'), octx = ocrCv.getContext('2d', {willReadFrequently:true});
+function drawT(ctx, cv, W, H){
+  const sx = Cam.rot ? -1 : 1, sy = (Cam.flipV ? -1 : 1) * (Cam.rot ? -1 : 1);
+  if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  ctx.setTransform(sx, 0, 0, sy, sx < 0 ? W : 0, sy < 0 ? H : 0); ctx.drawImage(camEl, 0, 0, W, H); ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+function grab(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null; drawT(pctx, proc, 384, Math.round(384*vh/vw)); return proc; }
+function grabOCR(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null; drawT(octx, ocrCv, 960, Math.round(960*vh/vw)); return ocrCv; }
+function thumb(src){ const c = document.createElement('canvas'); c.width = c.height = 72; const s = Math.min(src.width, src.height); c.getContext('2d').drawImage(src, (src.width-s)/2, (src.height-s)/2, s, s, 0, 0, 72, 72); return c.toDataURL('image/jpeg', .6); }
+
+/* =====================================================================
+   OCR  ·  reads text on signs (Tesseract.js, loaded only when switched on)
+   ===================================================================== */
+const OCR = {
+  worker:null, loading:null, running:false, text:'', hits:new Map(),
+  load(){
+    if (this.loading) return this.loading;
+    this.loading = new Promise((res, rej) => {
+      if (window.Tesseract) return res();
+      const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    }).then(async () => { this.worker = await Tesseract.createWorker('eng'); await this.worker.setParameters({tessedit_pageseg_mode:'11'}); })
+      .catch(e => { this.loading = null; throw e; });
+    return this.loading;
+  },
+  sync(){ if (S.settings.ocr && Engine.running) this.start(); else this.stop(); },
+  async start(){
+    if (this.running) return; this.running = true;
+    try { toast('Loading text reader…'); await this.load(); } catch { toast('Could not load the text reader', 'bad'); this.running = false; return; }
+    while (this.running){
+      const c = grabOCR();
+      if (c){ try {
+        const {data} = await this.worker.recognize(c);
+        const words = (data.words || []).filter(w => w.confidence > 55).map(w => w.text.toUpperCase().replace(/[^A-Z0-9]/g, '')).filter(w => w.length >= 2);
+        this.text = words.join(' '); this.match(words);
+      } catch (e) { console.warn(e); } }
+      await sleep(700);
+    }
+  },
+  stop(){ this.running = false; this.text = ''; },
+  match(words){
+    const joined = ' ' + words.join(' ') + ' ';
+    for (const c of Model.classes){
+      if (c.bg || !c.keywords) continue;
+      const kws = c.keywords.split(',').map(s => s.toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim()).filter(Boolean);
+      if (kws.some(k => joined.includes(k))) this.hits.set(c.id, Date.now());
+    }
+  }
+};
+
+/* =====================================================================
+   BLE  ·  Web Bluetooth to ESP32 (Nordic UART)
+   ===================================================================== */
+const BLE = {
+  dev:null, rx:null, connected:false, connecting:false, busy:false, pendingDrive:null, lastDrive:false, q:[],
+  async pair(){
+    if (!navigator.bluetooth){ toast('Bluetooth needs Chrome on Android (or Bluefy on iPhone).', 'bad'); return; }
+    try {
+      const dev = await navigator.bluetooth.requestDevice({filters:[{namePrefix:'CognoPilot'}, {services:[SVC]}], optionalServices:[SVC]});
+      await this.connect(dev);
+    } catch (e) { if (e.name !== 'NotFoundError') toast('Car connection failed: ' + e.message, 'bad'); this.connecting = false; renderBle(); }
+  },
+  async auto(){
+    if (!navigator.bluetooth?.getDevices) return;
+    try { const ds = await navigator.bluetooth.getDevices(); const d = ds.find(x => (x.name || '').startsWith('CognoPilot')); if (d) await this.connect(d); } catch {}
+  },
+  async connect(dev){
+    this.dev = dev; this.connecting = true; renderBle();
+    if (!dev._cgp){ dev._cgp = true; dev.addEventListener('gattserverdisconnected', () => this.onDisc()); }
+    const srv = await dev.gatt.connect();
+    const svc = await srv.getPrimaryService(SVC);
+    this.rx = await svc.getCharacteristic(RXU);
+    try { const tx = await svc.getCharacteristic(TXU); await tx.startNotifications(); tx.addEventListener('characteristicvaluechanged', e => console.log('ESP32:', new TextDecoder().decode(e.target.value).trim())); } catch {}
+    this.connected = true; this.connecting = false; this.busy = false; Lcd.reset();
+    logEvent('system', 'Car connected over Bluetooth'); toast('Car connected', 'ok'); renderBle(); renderSetup(); updateStage();
+  },
+  onDisc(){
+    const was = this.connected; this.connected = false; this.rx = null; renderBle(); renderSetup(); updateStage();
+    if (was){ logEvent('system', 'Car disconnected'); toast('Car disconnected. Reconnecting…', 'warn'); this.reconnect(); }
+  },
+  async reconnect(){
+    for (let i = 0; i < 6 && !this.connected && this.dev && S.role; i++){ await sleep(1500); try { await this.connect(this.dev); return; } catch { this.connecting = false; renderBle(); } }
+  },
+  disconnect(){ const d = this.dev; this.dev = null; this.connected = false; try { d?.gatt?.disconnect(); } catch {} renderBle(); },
+  drive(l, r){ this.pendingDrive = `D,${Math.round(l)},${Math.round(r)}\n`; this.pump(); },
+  send(s){ this.q.push(s.endsWith('\n') ? s : s + '\n'); if (this.q.length > 40) this.q.splice(0, this.q.length - 40); this.pump(); },
+  async pump(){
+    if (this.busy || !this.connected || !this.rx) return;
+    let msg;
+    if (this.pendingDrive && (!this.q.length || !this.lastDrive)){ msg = this.pendingDrive; this.pendingDrive = null; this.lastDrive = true; }
+    else if (this.q.length){ msg = this.q.shift(); this.lastDrive = false; }
+    else return;
+    this.busy = true;
+    try {
+      const b = new TextEncoder().encode(msg);
+      for (let i = 0; i < b.length; i += 20){
+        const ch = b.slice(i, i + 20);
+        if (this.rx.writeValueWithoutResponse) await this.rx.writeValueWithoutResponse(ch); else await this.rx.writeValue(ch);
+      }
+    } catch (e) { console.warn('BLE write', e); }
+    this.busy = false;
+    if (this.pendingDrive || this.q.length) this.pump();
+  }
+};
+
+/* LCD 20x4 on the car */
+const Lcd = {
+  sent:['','','',''],
+  reset(){ this.sent = ['','','','']; },
+  fit(t){ return String(t || '').toUpperCase().replace(/[^\x20-\x7E]/g, '').slice(0, 20).padEnd(20); },
+  lr(a, b){ a = String(a); b = String(b); return a.slice(0, 20 - b.length - 1).padEnd(20 - b.length) + b; },
+  set(r, t){ t = this.fit(t); if (!BLE.connected || this.sent[r] === t) return; this.sent[r] = t; BLE.send(`T,${r},${t}`); },
+  update(){
+    if (!BLE.connected) return;
+    if (Engine.running){
+      const st = Engine.snapshot();
+      const m = st.estop ? 'E-STOP' : st.mode === 'MANUAL' ? 'MANUAL' : st.ap ? 'AUTO' : 'PAUSED';
+      this.set(0, this.lr('COGNO PILOT', m));
+      this.set(1, st.custom ? 'SEE: ' + st.custom.name : st.dets[0] ? 'SEE: ' + st.dets[0].label : 'ROAD CLEAR');
+      this.set(2, this.lr('SPEED ' + st.speed + '%', st.cap < 100 ? 'MAX ' + st.cap + '%' : 'FREE'));
+      this.set(3, st.active ? (st.active.lcd || st.active.label) : (st.ap ? 'ALL SYSTEMS GO' : 'READY'));
+    } else {
+      this.set(0, this.lr('COGNO PILOT', 'TRAIN'));
+      this.set(1, Link.linked ? 'LINK: ' + (S.linkedName || 'STATION') : 'WAITING FOR LINK');
+      this.set(2, Model.learned() + ' OBJECTS LEARNED');
+      this.set(3, 'BY COGNOSPACE');
+    }
+  },
+  msg(rows){ rows.forEach((t, i) => this.set(i, t)); }
+};
+
+/* =====================================================================
+   ENGINE  ·  perception -> rules -> speed -> motors   (runs in Live mode)
+   ===================================================================== */
+const Engine = {
+  running:false, ap:false, estop:false, speed:0, manual:null, effects:new Map(), cool:new Map(), streak:new Map(),
+  dets:[], custom:null, fps:0, ti:null,
+  start(){
+    if (this.running) return; this.running = true; this.ap = false; this.estop = false; this.speed = 0; this.effects.clear(); this.streak.clear();
+    AI.init().then(() => this.loop()); this.ti = setInterval(() => this.tick(), 100); OCR.sync();
+    logEvent('system', 'Live mode started');
+  },
+  stop(){
+    if (!this.running) return;
+    this.running = false; clearInterval(this.ti); this.ap = false; this.speed = 0; this.manual = null;
+    this.dets = []; this.custom = null; this.effects.clear();
+    BLE.drive(0, 0); BLE.send('S'); OCR.stop();
+  },
+  async loop(){
+    let n = 0, t = performance.now();
+    while (this.running){
+      const t0 = performance.now(), f = AI.ready ? grab() : null;
+      if (f){
+        try {
+          if (S.settings.detector && n % 2 === 0) this.dets = AI.detect(f);
+          else { const v = AI.embed(f); this.custom = Model.classify(v); }
+          if (!S.settings.detector) this.dets = [];
+          this.perceive();
+        } catch (e) { console.warn(e); }
+        n++;
+        if (performance.now() - t > 1000){ this.fps = Math.round(n * 1000 / (performance.now() - t)); n = 0; t = performance.now(); }
+      } else if (!Cam.stream){ this.dets = []; this.custom = null; this.fps = 0; this.streak.clear(); n = 0; t = performance.now(); }
+      await sleep(Math.max(10, 66 - (performance.now() - t0)));
+    }
+  },
+  perceive(){
+    const now = Date.now(), seen = [];
+    const cu = this.custom;
+    if (cu && cu.c && !cu.c.bg && cu.c.rule && cu.sim >= 0.5 && cu.p*100 >= cu.c.rule.minConf) seen.push({key:'c:'+cu.c.id, label:cu.c.name, rule:cu.c.rule, conf:cu.p});
+    for (const c of Model.classes){
+      const h = OCR.hits.get(c.id);
+      if (h && now - h < 2500 && !c.bg && c.rule && !seen.some(s => s.key === 'c:'+c.id)) seen.push({key:'c:'+c.id, label:c.name, rule:c.rule, conf:.9, text:true});
+    }
+    for (const d of this.dets){
+      const r = Model.builtin[d.label];
+      if (r && d.score*100 >= r.minConf && !seen.some(s => s.key === 'b:'+d.label)) seen.push({key:'b:'+d.label, label:d.label, rule:r, conf:d.score});
+    }
+    const keys = new Set(seen.map(s => s.key));
+    for (const k of [...this.streak.keys()]) if (!keys.has(k)) this.streak.delete(k);
+    for (const s of seen){ const n = (this.streak.get(s.key) || 0) + 1; this.streak.set(s.key, n); if (n >= 2 || s.text) this.trigger(s); }
+
+    if (S.settings.guard){
+      for (const d of this.dets){
+        if (!GUARD.includes(d.label) || d.score < .5) continue;
+        const cx = d.box.x + d.box.w/2;
+        if (cx > .2 && cx < .8 && d.box.w*d.box.h*100 >= S.settings.guardArea){
+          const had = this.effects.has('guard');
+          this.effects.set('guard', {label:'Obstacle: ' + d.label, cap:0, until:now + 700, kind:'stop', lcd:'OBSTACLE AHEAD'});
+          if (!had) logEvent('stop', `Obstacle ahead (${d.label}). Stopping`, {label:'Obstacle'});
+          break;
+        }
+      }
+    }
+  },
+  trigger(s){
+    const now = Date.now(), r = s.rule, had = this.effects.has(s.key);
+    if (r.action === 'ignore') return;
+    if (r.action === 'limit') this.effects.set(s.key, {label:s.label, cap:r.value, until:now + Math.max(.5, r.hold)*1000, kind:'limit', lcd:r.lcd});
+    else if (r.action === 'stop') this.effects.set(s.key, {label:s.label, cap:0, until:now + Math.max(.6, r.hold)*1000, kind:'stop', lcd:r.lcd});
+    else if (r.action === 'stopgo'){
+      if ((this.cool.get(s.key) || 0) > now || had) return;
+      this.effects.set(s.key, {label:s.label, cap:0, until:now + r.value*1000, kind:'stop', lcd:r.lcd});
+      this.cool.set(s.key, now + r.value*1000 + 6000);
+    }
+    if (!had) logEvent(r.action === 'limit' ? 'rule' : 'stop', `${s.label}${s.text ? ' (text)' : ''}: ${describeRule(r)}`, {label:s.label});
+  },
+  active(){ let a = null; for (const e of this.effects.values()) if (!a || e.cap < a.cap) a = e; return a; },
+  tick(){
+    const now = Date.now();
+    for (const [k, e] of this.effects) if (e.until < now) this.effects.delete(k);
+    const act = this.active(), cap = act ? act.cap : 100;
+    const man = this.manual && this.manual.until > now ? this.manual : null;
+    let L = 0, R = 0;
+    if (this.estop){ this.speed = 0; }
+    else if (man){
+      const p = Math.max(S.settings.cruise, 55) / 100;
+      L = clamp(man.y + man.x*.8, -100, 100) * p; R = clamp(man.y - man.x*.8, -100, 100) * p;
+      this.speed = Math.round(Math.abs(man.y) * p);
+    } else {
+      const target = this.ap ? Math.min(S.settings.cruise, cap) : 0;
+      if (target < this.speed) this.speed = Math.max(target, this.speed - (target === 0 ? 30 : 10));
+      else this.speed = Math.min(target, this.speed + 5);
+      const t = S.settings.trim / 100;
+      L = this.speed * (1 + t); R = this.speed * (1 - t);
+    }
+    BLE.drive(clamp(L, -100, 100), clamp(R, -100, 100));
+    if (S.session) S.session.maxSpeed = Math.max(S.session.maxSpeed, Math.round(this.speed));
+  },
+  handle(c){
+    if (c.k === 'ap'){
+      if (c.on && !Cam.stream){ toast('Turn the camera on before starting autopilot', 'warn'); logEvent('system', 'Autopilot blocked: camera is off'); return; }
+      if (c.on && S.role === 'vehicle' && !BLE.connected) toast('Car is not connected. Running as preview only.', 'warn');
+      this.estop = false; this.ap = !!c.on; logEvent('system', c.on ? 'Autopilot started' : 'Autopilot paused');
+    } else if (c.k === 'estop'){
+      this.estop = true; this.ap = false; this.speed = 0; this.manual = null; BLE.drive(0, 0); BLE.send('S');
+      if (S.session) S.session.estops++; logEvent('estop', 'Emergency stop');
+    } else if (c.k === 'set'){
+      Object.assign(S.settings, c.s); LS.set('settings', S.settings); renderSettings(); OCR.sync();
+    } else if (c.k === 'man'){
+      this.manual = c.end ? null : {x:clamp(c.x, -100, 100), y:clamp(c.y, -100, 100), until:Date.now() + 450};
+      if (!c.end) this.estop = false;
+    } else if (c.k === 'cam'){ Cam.action(c.a); }
+  },
+  snapshot(){
+    const act = this.active(), now = Date.now();
+    const man = this.manual && this.manual.until > now;
+    const cu = this.custom && this.custom.c && !this.custom.c.bg && this.custom.p > .5 && this.custom.sim >= .5 ? this.custom : null;
+    return {
+      mode: this.estop ? 'E-STOP' : man ? 'MANUAL' : this.ap ? 'AUTO' : 'PAUSED', ap:this.ap, estop:this.estop,
+      speed:Math.round(this.speed), cap: act ? act.cap : 100, active: act ? {label:act.label, kind:act.kind, lcd:act.lcd} : null,
+      dets: this.dets.slice(0, 8).map(d => ({label:d.label, score:+d.score.toFixed(2), box:{x:+d.box.x.toFixed(3), y:+d.box.y.toFixed(3), w:+d.box.w.toFixed(3), h:+d.box.h.toFixed(3)}})),
+      custom: cu ? {name:cu.c.name, color:cu.c.color, p:Math.round(cu.p*100), rule:describeRule(cu.c.rule)} : null,
+      ocr: OCR.text.slice(0, 60), ble:BLE.connected, fps:this.fps, cam:Cam.info(), learned:Model.learned()
+    };
+  }
+};
+/* send a command: to the vehicle if linked as controller, else run locally */
+function cmd(c){ if (S.role === 'controller' && Link.linked) Link.send({t:'cmd', c}); else Engine.handle(c); }
+
+/* =====================================================================
+   LINK  ·  PeerJS (WebRTC) between Control Station and Vehicle
+   ===================================================================== */
+const Link = {
+  peer:null, slot:0, conns:new Map(), vconns:new Set(), linked:null, call:null, lastPing:0, rx:null, timers:[],
+  room(){ return (S.room || 'cognospace').toLowerCase().replace(/[^a-z0-9]/g, '') || 'cognospace'; },
+  idFor(s){ return `cgp-${this.room()}-v${s}`; },
+  send(m){ const c = S.role === 'controller' ? this.linked?.conn : this.linked; if (c?.open) { try { c.send(m); } catch (e) { console.warn(e); } } },
+  destroy(){
+    this.timers.forEach(clearInterval); this.timers = [];
+    try { this.call?.close(); } catch {} this.call = null;
+    try { this.peer?.destroy(); } catch {} this.peer = null;
+    this.conns.clear(); this.vconns.clear(); this.linked = null; S.remote = null; remoteEl.srcObject = null;
+  },
+  replaceTrack(track){
+    const pc = this.call?.peerConnection; if (!pc || !track) return;
+    const snd = pc.getSenders().find(s => s.track && s.track.kind === 'video'); snd?.replaceTrack(track).catch(() => {});
+  },
+
+  /* ---------- vehicle side ---------- */
+  startVehicle(slot=1){
+    if (!window.Peer){ setLink('bad', 'Pairing offline'); toast('Pairing service could not load. Check the internet connection.', 'bad'); return; }
+    if (slot > MAX_SLOTS){ setLink('bad', 'Fleet is full'); return; }
+    setLink('wait', 'Going online…');
+    const p = new Peer(this.idFor(slot), PEER_OPTS); this.peer = p; this.slot = slot;
+    p.on('open', () => { setLink('wait', 'Discoverable'); renderSetup(); renderDrawer(); });
+    p.on('error', e => {
+      if (e.type === 'unavailable-id'){ p.destroy(); if (this.peer === p) this.startVehicle(slot + 1); return; }
+      if (['network','server-error','socket-error','socket-closed'].includes(e.type)){
+        setLink('bad', 'Offline'); setTimeout(() => { if (this.peer === p && S.role){ p.destroy(); this.startVehicle(slot); } }, 4000);
+      } else console.warn('peer', e.type, e);
+    });
+    p.on('disconnected', () => { if (this.peer === p && !p.destroyed) setTimeout(() => { try { p.reconnect(); } catch {} }, 1500); });
+    p.on('connection', conn => {
+      this.vconns.add(conn);
+      conn.on('open', () => conn.send(this.hello()));
+      conn.on('data', d => this.vData(conn, d));
+      conn.on('close', () => { this.vconns.delete(conn); if (this.linked === conn) this.unlinkVehicle('Control Station disconnected'); });
+      conn.on('error', () => {});
+    });
+    this.timers.push(setInterval(() => {
+      if (this.linked && Date.now() - this.lastPing > 7000) this.unlinkVehicle('Lost connection to Control Station');
+      const h = this.hello(); this.vconns.forEach(c => { if (c.open && c !== this.linked) try { c.send(h); } catch {} });
+    }, 2500));
+  },
+  hello(){ return {t:'hello', name:S.name, slot:this.slot, ble:BLE.connected, mode:S.mode, busy:this.linked ? (S.linkedName || 'another station') : null, learned:Model.learned(), samples:Model.total(), cam:!!Cam.stream}; },
+  vData(conn, d){
+    if (!d || typeof d !== 'object') return;
+    const mine = this.linked === conn;
+    switch (d.t){
+      case 'claim':
+        if (this.linked && !mine && this.linked.open){ conn.send({t:'busy', by:S.linkedName}); return; }
+        this.linked = conn; S.linkedName = conn.metadata?.name || 'Control Station'; this.lastPing = Date.now();
+        conn.send({...this.hello(), t:'claimed'});
+        this.startCall(conn.peer);
+        logEvent('system', `Linked to ${S.linkedName}`); toast(`Connected to ${S.linkedName}`, 'ok');
+        setLink('on', S.linkedName); renderAll(); break;
+      case 'release': if (mine) this.unlinkVehicle('Control Station unlinked'); break;
+      case 'ping': if (mine){ this.lastPing = Date.now(); conn.send({t:'pong'}); } break;
+      case 'mode': if (mine) setMode(d.m, true); break;
+      case 'cmd': if (mine) Engine.handle(d.c); break;
+      case 'ds0': if (mine) this.rx = {id:d.id, n:d.n, parts:new Array(d.n), got:0}; break;
+      case 'ds1': if (mine && this.rx?.id === d.id && this.rx.parts[d.i] == null){ this.rx.parts[d.i] = d.d; this.rx.got++; } break;
+      case 'ds2':
+        if (mine && this.rx?.id === d.id && this.rx.got === this.rx.n){
+          try {
+            Model.load(JSON.parse(this.rx.parts.join(''))); Model.save(); S.synced = Date.now();
+            conn.send({t:'dsok', learned:Model.learned(), samples:Model.total()});
+            toast(`New training received: ${Model.learned()} objects`, 'ok'); logEvent('system', `Training received (${Model.learned()} objects, ${Model.total()} samples)`);
+            Lcd.msg(['TRAINING RECEIVED', Model.learned() + ' OBJECTS', Model.total() + ' SAMPLES', '']);
+            renderAll();
+          } catch (e) { conn.send({t:'dserr'}); toast('Training data was damaged. Ask the station to resend.', 'bad'); }
+          this.rx = null;
+        } break;
+      case 'end': if (mine){ conn.send({t:'ended'}); setTimeout(() => endSession({wipe:!!d.wipe, by:S.linkedName}), 150); } break;
+    }
+  },
+  startCall(peerId){
+    try { this.call?.close(); } catch {}
+    if (!Cam.stream){ setTimeout(() => { if (this.linked) this.startCall(peerId); }, 1500); return; }
+    this.call = this.peer.call(peerId, Cam.stream);
+  },
+  unlinkVehicle(msg){
+    const was = !!this.linked; this.linked = null; S.linkedName = '';
+    try { this.call?.close(); } catch {} this.call = null;
+    if (Engine.ap) Engine.handle({k:'ap', on:false});
+    if (was){ toast(msg, 'warn'); logEvent('system', msg); }
+    setLink('wait', 'Discoverable'); renderAll();
+  },
+
+  /* ---------- control station side ---------- */
+  startController(){
+    if (!window.Peer){ setLink('bad', 'Pairing offline'); toast('Pairing service could not load. Check the internet connection.', 'bad'); return; }
+    const p = new Peer(`cgp-${this.room()}-c-${uid()}`, PEER_OPTS); this.peer = p;
+    setLink('wait', 'Going online…');
+    p.on('open', () => { setLink('wait', 'Searching…'); this.scan(); });
+    p.on('error', e => {
+      if (e.type === 'peer-unavailable'){ const m = /-v(\d+)/.exec(e.message || ''); if (m) this.drop(+m[1]); return; }
+      if (['network','server-error','socket-error','socket-closed'].includes(e.type)){
+        setLink('bad', 'Offline'); setTimeout(() => { if (this.peer === p && S.role){ this.destroy(); this.startController(); } }, 4000);
+      } else console.warn('peer', e.type, e);
+    });
+    p.on('disconnected', () => { if (this.peer === p && !p.destroyed) setTimeout(() => { try { p.reconnect(); } catch {} }, 1500); });
+    p.on('call', call => {
+      try { this.call?.close(); } catch {}
+      this.call = call; call.answer();
+      call.on('stream', s => { remoteEl.srcObject = s; remoteEl.play().catch(() => {}); updateStage(); });
+      call.on('close', () => { if (this.call === call){ remoteEl.srcObject = null; updateStage(); } });
+    });
+    this.timers.push(setInterval(() => this.scan(), 6000));
+    this.timers.push(setInterval(() => { if (this.linked) this.send({t:'ping'}); }, 2000));
+  },
+  scan(){
+    if (!this.peer || this.peer.disconnected || !this.peer.open) return;
+    for (let s = 1; s <= MAX_SLOTS; s++){
+      if (this.conns.has(s)) continue;
+      const conn = this.peer.connect(this.idFor(s), {reliable:true, metadata:{name:S.name}});
+      const e = {conn, slot:s, open:false, info:null}; this.conns.set(s, e);
+      const to = setTimeout(() => { if (!e.open){ try { conn.close(); } catch {} if (this.conns.get(s) === e) this.conns.delete(s); } }, 5000);
+      conn.on('open', () => { e.open = true; clearTimeout(to); });
+      conn.on('data', d => this.cData(e, d));
+      conn.on('close', () => { if (this.conns.get(s) === e) this.conns.delete(s); if (this.linked === e) this.unlinkController(`${e.info?.name || 'Vehicle'} disconnected`); renderDrawer(); });
+      conn.on('error', () => {});
+    }
+  },
+  drop(s){ const e = this.conns.get(s); if (e && !e.open){ try { e.conn.close(); } catch {} this.conns.delete(s); } },
+  found(){ return [...this.conns.values()].filter(e => e.open && e.info).sort((a, b) => a.slot - b.slot); },
+  cData(e, d){
+    if (!d || typeof d !== 'object') return;
+    switch (d.t){
+      case 'hello': e.info = d; renderDrawer(); updateLinkPill(); break;
+      case 'claimed':
+        e.info = d; this.linked = e; S.linkedName = d.name;
+        setLink('on', d.name); toast(`Connected to ${d.name}`, 'ok'); logEvent('system', `Linked to ${d.name}`);
+        this.send({t:'mode', m:S.mode}); this.send({t:'cmd', c:{k:'set', s:S.settings}});
+        syncEngine(); renderAll(); break;
+      case 'busy': toast(`${e.info?.name || 'That vehicle'} is already controlled by ${d.by}`, 'warn'); break;
+      case 'st':
+        if (this.linked !== e) return;
+        { const wasOff = !!S.remote?.cam?.off; S.remote = d; e.info = {...e.info, ble:d.ble}; if (wasOff !== !!d.cam?.off){ updateStage(); toast(d.cam?.off ? `${S.linkedName}'s camera is off` : `${S.linkedName}'s camera is back on`, d.cam?.off ? 'warn' : 'ok'); } }
+        if (S.session && d.speed > S.session.maxSpeed) S.session.maxSpeed = d.speed;
+        remoteEl.style.transform = Cam.css(d.cam || {}); break;
+      case 'ev': if (this.linked === e) logEvent(d.e.kind, d.e.text, {label:d.e.label, remote:true, t:d.e.t}); break;
+      case 'dsok': S.synced = Date.now(); S.lastSent = Date.now(); toast(`Vehicle learned ${d.learned} objects`, 'ok'); renderSend(); break;
+      case 'dserr': toast('Transfer failed. Please send again.', 'bad'); renderSend(); break;
+      case 'ended': break;
+    }
+  },
+  claim(slot){
+    const e = this.conns.get(slot); if (!e?.open) return;
+    if (this.linked && this.linked !== e) this.release(true);
+    e.conn.send({t:'claim'});
+  },
+  release(silent){ if (!this.linked) return; this.send({t:'release'}); this.unlinkController(silent ? '' : 'Vehicle unlinked'); },
+  unlinkController(msg){
+    this.linked = null; S.remote = null; S.linkedName = '';
+    try { this.call?.close(); } catch {} this.call = null; remoteEl.srcObject = null;
+    if (msg){ toast(msg, 'warn'); logEvent('system', msg); }
+    setLink('wait', 'Searching…'); syncEngine(); renderAll();
+  },
+  async sendDataset(){
+    if (!this.linked) return;
+    const json = JSON.stringify(Model.toJSON(3)), id = uid(), CH = 16000, n = Math.ceil(json.length / CH);
+    const btn = $('#sendBtn'), prog = $('#sendProg'); btn.disabled = true; prog.hidden = false;
+    this.send({t:'ds0', id, n});
+    for (let i = 0; i < n; i++){
+      if (!this.linked) break;
+      this.send({t:'ds1', id, i, d:json.slice(i*CH, (i+1)*CH)});
+      prog.firstElementChild.style.width = Math.round((i+1)/n*100) + '%';
+      $('#sendTxt').textContent = `Sending… ${Math.round((i+1)/n*100)}%`;
+      const dc = this.linked?.conn?.dataChannel;
+      while (dc && dc.bufferedAmount > 512*1024) await sleep(40);
+      if (i % 6 === 5) await sleep(15);
+    }
+    this.send({t:'ds2', id});
+    setTimeout(() => { prog.hidden = true; prog.firstElementChild.style.width = 0; renderSend(); }, 800);
+  }
+};
+
+/* =====================================================================
+   SESSION LOG
+   ===================================================================== */
+function newSession(){ S.session = {start:Date.now(), liveMs:0, liveSince:null, triggers:{}, maxSpeed:0, estops:0, log:[]}; }
+function logEvent(kind, text, x={}){
+  if (!S.session) return;
+  const e = {t:x.t || Date.now(), kind, text, label:x.label, remote:!!x.remote};
+  S.session.log.push(e); if (S.session.log.length > 1500) S.session.log.shift();
+  if ((kind === 'rule' || kind === 'stop') && x.label) S.session.triggers[x.label] = (S.session.triggers[x.label] || 0) + 1;
+  if (kind === 'estop' && x.remote) S.session.estops++;
+  if (S.role === 'vehicle' && Link.linked && !x.remote) Link.send({t:'ev', e});
+  renderLog();
+}
+
+/* =====================================================================
+   MODE + ROLE
+   ===================================================================== */
+function engineLocal(){ return S.mode === 'live' && !(S.role === 'controller' && Link.linked); }
+function syncEngine(){ if (S.role && engineLocal()) Engine.start(); else Engine.stop(); }
+function setMode(m, fromRemote=false){
+  if (m !== 'train' && m !== 'live') return;
+  const prev = S.mode; S.mode = m;
+  if (S.session){
+    if (m === 'live' && !S.session.liveSince) S.session.liveSince = Date.now();
+    if (m === 'train' && S.session.liveSince){ S.session.liveMs += Date.now() - S.session.liveSince; S.session.liveSince = null; }
+  }
+  if (S.role === 'controller' && Link.linked && !fromRemote) Link.send({t:'mode', m});
+  syncEngine();
+  if (m === 'live' && S.role === 'vehicle' && !BLE.connected) BLE.auto();
+  if (fromRemote && prev !== m) toast(`${S.linkedName || 'Control Station'} switched to ${m === 'live' ? 'Live' : 'Train'} mode`);
+  S.previewNoCar = false;
+  renderAll();
+}
+async function startRole(role){
+  S.role = role; S.room = $('#roomIn').value.trim() || 'cognospace'; LS.set('room', S.room);
+  const tag = Math.random().toString(36).slice(2, 4).toUpperCase();
+  S.name = LS.get('name.' + role, '') || (role === 'vehicle' ? `Vehicle-${tag}` : `Station-${tag}`);
+  LS.set('name.' + role, S.name);
+  newSession(); S.mode = 'train';
+  $('#landing').hidden = true; $('#app').hidden = false; window.scrollTo(0, 0);
+  if (role === 'controller' && LS.get('cam', null) == null) Cam.mirror = true;
+  Cam.apply(); renderAll();
+  await Cam.start(role === 'vehicle' ? 'environment' : 'user');
+  AI.init();
+  if (role === 'vehicle'){ Link.startVehicle(); BLE.auto(); wake(); logEvent('system', `Vehicle online as ${S.name}`); }
+  else { Link.startController(); logEvent('system', `Control Station online as ${S.name}`); setTimeout(() => { if (!Link.linked) openDrawer(); }, 700); }
+}
+let wakeLock = null;
+async function wake(){ try { wakeLock = await navigator.wakeLock?.request('screen'); } catch {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.role === 'vehicle') wake(); });
+
+/* =====================================================================
+   END SESSION
+   ===================================================================== */
+function openEnd(){
+  const s = S.session; if (!s) return;
+  const live = s.liveMs + (s.liveSince ? Date.now() - s.liveSince : 0);
+  const trig = Object.values(s.triggers).reduce((a, b) => a + b, 0);
+  $('#sumGrid').innerHTML = [
+    [fmtDur(Date.now() - s.start), 'Session time'], [fmtDur(live), 'Live driving'], [Model.learned(), 'Objects learned'],
+    [trig, 'Rules triggered'], [s.maxSpeed + '%', 'Top speed'], [s.estops, 'Emergency stops']
+  ].map(([v, l]) => `<div><b>${v}</b><small>${l}</small></div>`).join('');
+  const ent = Object.entries(s.triggers).sort((a, b) => b[1] - a[1]).slice(0, 6), mx = Math.max(1, ...ent.map(e => e[1]));
+  $('#sumRules').innerHTML = ent.length ? `<p class="hint" style="margin:0 0 6px;font-weight:700">Most triggered</p>` + ent.map(([k, v]) =>
+    `<div class="pbar"><span>${esc(k)}</span><span class="t"><i style="width:${v/mx*100}%;background:var(--grad)"></i></span><span>${v}×</span></div>`).join('') : '';
+  const remote = S.role === 'controller' && Link.linked;
+  $('#endRemoteRow').hidden = !remote; $('#endRemoteName').textContent = S.linkedName || 'the vehicle';
+  $('#wipeChk').checked = false; $('#endModal').hidden = false;
+}
+function downloadLog(){
+  const s = S.session; if (!s) return;
+  const rows = [['time', 'type', 'event', 'source']].concat(s.log.map(e => [new Date(e.t).toISOString(), e.kind, e.text, e.remote ? 'vehicle' : S.role]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `cogno-pilot-session-${new Date(s.start).toISOString().slice(0, 16).replace(/[:T]/g, '-')}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function endSession({wipe=false, alsoRemote=false, by=null}={}){
+  $('#endModal').hidden = true;
+  if (alsoRemote && Link.linked){ Link.send({t:'end', wipe}); await sleep(300); }
+  Engine.stop();
+  if (BLE.connected){ BLE.send('S'); Lcd.msg(['COGNO PILOT', 'SESSION ENDED', by ? 'BY ' + by : '', 'SEE YOU SOON']); await sleep(700); BLE.disconnect(); }
+  OCR.stop(); Link.destroy(); Cam.stop(); closeDrawer();
+  try { wakeLock?.release(); } catch {} wakeLock = null;
+  if (wipe){ ['dataset', 'settings', 'cam', 'name.vehicle', 'name.controller'].forEach(k => LS.del(k)); Model.reset(); S.settings = {cruise:60, trim:0, detector:true, ocr:false, guard:true, guardArea:10}; Cam.mirror = Cam.flipV = Cam.rot = false; }
+  S.role = null; S.session = null; S.remote = null; S.mode = 'train';
+  $('#app').hidden = true; $('#landing').hidden = false; window.scrollTo(0, 0);
+  toast(by ? `Session ended by ${by}${wipe ? '. Device data erased' : ''}` : wipe ? 'Session ended. Device data erased' : 'Session ended. Training data kept on this device', 'ok');
+}
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+function setLink(state, txt){ S.linkState = state; S.linkTxt = txt; updateLinkPill(); }
+function updateLinkPill(){
+  const linked = !!Link.linked;
+  $('#linkDot').className = 'dot ' + (linked ? 'on' : S.linkState || '');
+  let txt = linked ? S.linkedName : S.linkTxt || 'Not linked';
+  if (!linked && S.role === 'controller'){ const n = Link.found().length; if (n) txt = `${n} vehicle${n > 1 ? 's' : ''} nearby`; }
+  $('#linkTxt').textContent = txt;
+}
+function renderBle(){
+  $('#blePill').hidden = S.role !== 'vehicle';
+  $('#bleDot').className = 'dot ' + (BLE.connected ? 'on' : BLE.connecting ? 'wait' : '');
+  $('#bleTxt').textContent = BLE.connected ? 'Car connected' : BLE.connecting ? 'Connecting…' : 'Connect car';
+}
+function renderSetup(){
+  const v = S.role === 'vehicle';
+  $('#setupCard').hidden = !v || (S.mode === 'live') || (!!Cam.stream && BLE.connected && !!Link.linked);
+  $('#ckCam').classList.toggle('done', !!Cam.stream);
+  $('#ckBle').classList.toggle('done', BLE.connected); $('#ckBleBtn').hidden = BLE.connected;
+  $('#ckLink').classList.toggle('done', !!Link.linked);
+  $('#ckLinkTxt').textContent = Link.linked ? `Linked to ${S.linkedName}` : `Waiting for Control Station · fleet “${Link.room()}”`;
+}
+function renderCamTools(){
+  const c = (S.role === 'controller' && Link.linked && S.mode === 'live' && S.remote?.cam) || Cam;
+  const off = c === Cam ? !Cam.stream : !!c.off;
+  $$('[data-cam]').forEach(b => {
+    const a = b.dataset.cam;
+    if (a === 'power'){ b.classList.toggle('off', off); b.title = off ? 'Turn camera on' : 'Turn camera off'; return; }
+    b.disabled = off && a !== 'switch';
+  });
+  $$('[data-cam]').forEach(b => { const a = b.dataset.cam; if (a === 'power') return; b.classList.toggle('on', a === 'mirror' ? !!c.mirror : a === 'flip' ? !!c.flipV : a === 'rot' ? !!c.rot : false); });
+}
+function updateStage(){
+  if (!S.role) return;
+  const remote = S.role === 'controller' && Link.linked && S.mode === 'live';
+  camEl.hidden = remote; remoteEl.hidden = !remote;
+  const empty = $('#stageEmpty');
+  if (remote && S.remote?.cam?.off){ empty.hidden = false; $('#emptyT').textContent = 'Vehicle camera is off'; $('#emptyP').textContent = `${S.linkedName}'s camera was turned off. Autopilot can't run without it.`; $('#emptyBtn').hidden = false; }
+  else if (remote && !remoteEl.srcObject){ empty.hidden = false; $('#emptyT').textContent = 'Waiting for vehicle camera…'; $('#emptyP').textContent = `Connecting to ${S.linkedName}'s live view.`; $('#emptyBtn').hidden = true; }
+  else if (!remote && !Cam.stream){ empty.hidden = false; $('#emptyT').textContent = 'Camera is off'; $('#emptyP').textContent = S.mode === 'live' ? 'Autopilot needs the camera. Turn it on to drive.' : 'Turn it on to train objects.'; $('#emptyBtn').hidden = false; }
+  else empty.hidden = true;
+  $('#hud').hidden = S.mode !== 'live';
+  const vehLinked = S.role === 'vehicle' && Link.linked;
+  $('#predict').hidden = S.mode !== 'train' || vehLinked;
+  $('#ctrlBanner').hidden = !vehLinked; $('#ctrlTxt').textContent = `Controlled by ${S.linkedName}`;
+  $('#bleGate').hidden = !(S.role === 'vehicle' && S.mode === 'live' && !BLE.connected && !S.previewNoCar);
+  $('#fpsStat').hidden = S.mode !== 'live';
+  renderCamTools();
+}
+function renderAll(){
+  if (!S.role) return;
+  $('#roleTag').textContent = S.role === 'vehicle' ? 'Vehicle' : 'Control Station';
+  $$('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  const locked = S.role === 'vehicle' && !!Link.linked;
+  $('#modeSeg').classList.toggle('locked', locked); $('#modeSeg').title = locked ? `Controlled by ${S.linkedName}` : '';
+  const vehLinkedTrain = S.role === 'vehicle' && Link.linked && S.mode === 'train';
+  $('#trainPanel').hidden = S.mode !== 'train' || vehLinkedTrain;
+  $('#linkedTrainCard').hidden = !vehLinkedTrain;
+  $('#livePanel').hidden = S.mode !== 'live';
+  $('#ltTitle').textContent = `Linked to ${S.linkedName || 'Control Station'}`;
+  $('#ltObjs').textContent = Model.learned(); $('#ltSamples').textContent = Model.total(); $('#ltWhen').textContent = ago(S.synced);
+  $('#liveHint').hidden = S.role !== 'controller' || isMobile;
+  updateLinkPill(); renderBle(); renderSetup(); updateStage(); renderClasses(); renderRules(); renderSend(); renderSettings(); renderDrawer(); renderLog();
+}
+
+/* ---------- train: object list ---------- */
+let rec = null;
+function renderClasses(){
+  const el = $('#clsList'); if (!el || rec) return;
+  el.innerHTML = Model.classes.map(c => `
+    <div class="cls" data-id="${c.id}">
+      <div class="cls-top">
+        <span class="sw" style="background:${c.color}"></span>
+        <input class="cname" value="${esc(c.name)}" maxlength="28" ${c.bg ? 'readonly' : ''}>
+        <span class="count" data-count>${c.vecs.length} samples</span>
+        ${c.bg ? '' : '<button class="del" title="Delete">✕</button>'}
+      </div>
+      ${c.thumbs.length ? `<div class="thumbs">${c.thumbs.slice(0, 8).map(t => `<img src="${t}" alt="">`).join('')}</div>` : ''}
+      ${c.bg ? `<div class="bg-note">Record the empty road / floor with no sign. This teaches the car what “nothing special” looks like.</div>`
+             : `<input class="kw" placeholder="Text on the sign (optional), e.g. SCHOOL, STOP" value="${esc(c.keywords)}">`}
+      <div class="cls-foot">
+        <button class="rec"><i></i><span>Hold to record</span></button>
+        ${c.bg ? '' : `<button class="rule-link" data-rule="${c.id}">${esc(describeRule(c.rule))}</button>`}
+      </div>
+    </div>`).join('');
+}
+function addClass(){
+  const inp = $('#newCls'), name = inp.value.trim(); if (!name) { inp.focus(); return; }
+  if (Model.classes.some(c => c.name.toLowerCase() === name.toLowerCase())){ toast('That object already exists', 'warn'); return; }
+  const c = Model.add(name); inp.value = ''; renderClasses(); renderRules();
+  toast(`Added “${name}”. Hold record while showing it to the camera. Rule: ${describeRule(c.rule)}`);
+}
+function startRec(id, btn){
+  if (!AI.ready){ toast('AI is still loading. One moment…', 'warn'); return; }
+  if (!Cam.stream){ toast('Turn on the camera first', 'warn'); return; }
+  const c = Model.byId(id); if (!c) return;
+  if (c.vecs.length >= MAX_SAMPLES){ toast(`Max ${MAX_SAMPLES} samples per object`, 'warn'); return; }
+  btn.classList.add('on'); btn.querySelector('span').textContent = 'Recording…';
+  const cnt = btn.closest('.cls').querySelector('[data-count]');
+  rec = {id, btn, timer:setInterval(() => {
+    const f = grab(); if (!f) return;
+    try { c.vecs.push(AI.embed(f)); } catch (e) { console.warn(e); return; }
+    if (c.thumbs.length < 8 && c.vecs.length % 5 === 1) c.thumbs.push(thumb(f));
+    cnt.textContent = `${c.vecs.length} samples`;
+    if (c.vecs.length >= MAX_SAMPLES) stopRec();
+  }, 110)};
+}
+function stopRec(){
+  if (!rec) return; clearInterval(rec.timer); rec = null;
+  Model.changed(); renderClasses(); renderRules(); renderSend();
+}
+
+/* ---------- train: rules ---------- */
+function ruleCard(key, name, color, r){
+  const isLimit = r.action === 'limit', isGo = r.action === 'stopgo', noVal = r.action === 'stop' || r.action === 'ignore';
+  return `<div class="rule" data-key="${key}">
+    <div class="rule-h"><span class="sw" style="background:${color}"></span><b>${esc(name)}</b>${key.startsWith('b:') ? '<span class="count" style="margin-left:auto">built-in</span><button class="del" data-delb title="Remove">✕</button>' : ''}</div>
+    <p class="q">When Cogno Pilot sees this, what should it do?</p>
+    <div class="acts">
+      <button data-act="limit" class="${isLimit ? 'on' : ''}"><svg><use href="#i-gauge"/></svg>Limit speed</button>
+      <button data-act="stopgo" class="${isGo ? 'on' : ''}"><svg><use href="#i-timer"/></svg>Stop, then go</button>
+      <button data-act="stop" class="${r.action === 'stop' ? 'on' : ''}"><svg><use href="#i-hand"/></svg>Stop</button>
+      <button data-act="ignore" class="${r.action === 'ignore' ? 'on' : ''}"><svg><use href="#i-ban"/></svg>Ignore</button>
+    </div>
+    <div style="margin-top:12px" ${r.action === 'ignore' ? 'hidden' : ''}>
+      <label class="fld" ${noVal ? 'hidden' : ''}><span>${isLimit ? 'Max speed' : 'Stop for'} <output>${isLimit ? r.value + '%' : r.value + ' s'}</output></span>
+        <input type="range" data-f="value" min="${isLimit ? 10 : 1}" max="${isLimit ? 100 : 10}" step="${isLimit ? 5 : 1}" value="${r.value}"></label>
+      <label class="fld" ${isGo ? 'hidden' : ''}><span>Keep the rule after it's gone <output>${r.hold} s</output></span><input type="range" data-f="hold" min="0" max="15" step="1" value="${r.hold}"></label>
+      <label class="fld"><span>Only act when at least this sure <output>${r.minConf}%</output></span><input type="range" data-f="minConf" min="50" max="95" step="5" value="${r.minConf}"></label>
+      <label class="fld" style="margin-bottom:0"><span>LCD message</span><input class="txt" data-f="lcd" maxlength="20" value="${esc(r.lcd)}"></label>
+    </div>
+  </div>`;
+}
+function ruleFor(key){ return key.startsWith('c:') ? Model.byId(key.slice(2))?.rule : Model.builtin[key.slice(2)]; }
+function renderRules(){
+  const el = $('#ruleList'); if (!el) return;
+  const cls = Model.classes.filter(c => !c.bg);
+  el.innerHTML = cls.length || Object.keys(Model.builtin).length
+    ? cls.map(c => ruleCard('c:' + c.id, c.name, c.color, c.rule)).join('') + Object.entries(Model.builtin).map(([k, r]) => ruleCard('b:' + k, k, '#64748b', r)).join('')
+    : '<div class="empty">Add an object first, then choose what the car should do when it sees it.</div>';
+  $('#builtinSel').innerHTML = BUILTIN.filter(b => !Model.builtin[b]).map(b => `<option>${b}</option>`).join('');
+  const b = $('#ruleBadge'); b.textContent = cls.length + Object.keys(Model.builtin).length; b.hidden = !+b.textContent;
+}
+function showTab(group, tab){
+  $$(`#${group} button`).forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  if (group === 'trainTabs'){ $('#tabObjects').hidden = tab !== 'objects'; $('#tabRules').hidden = tab !== 'rules'; }
+  else { $('#tabDets').hidden = tab !== 'dets'; $('#tabLog').hidden = tab !== 'log'; $('#tabManual').hidden = tab !== 'manual'; }
+}
+
+/* ---------- send card ---------- */
+function renderSend(){
+  const card = $('#sendCard'); if (!card) return;
+  card.hidden = S.role !== 'controller';
+  const btn = $('#sendBtn'), sub = $('#sendSub');
+  if (!Link.linked){ btn.disabled = true; $('#sendTxt').textContent = 'Send training'; sub.textContent = 'Link a vehicle to send your objects and rules to it.'; return; }
+  const ready = Model.learned() > 0;
+  const fresh = S.synced && S.synced >= Model.updatedAt;
+  btn.disabled = !ready; $('#sendTxt').textContent = `Send to ${S.linkedName}`;
+  sub.innerHTML = !ready ? 'Record samples for at least one object first.'
+    : fresh ? `<b style="color:var(--ok)">Up to date</b> · sent ${ago(S.synced)}`
+    : `<b style="color:#b45309">Changes not sent yet</b> · ${Model.learned()} objects, ${Model.total()} samples`;
+}
+
+/* ---------- live ---------- */
+function renderSettings(){
+  const s = S.settings;
+  $('#cruise').value = s.cruise; $('#cruiseOut').textContent = s.cruise + '%';
+  $('#trim').value = s.trim; $('#trimOut').textContent = (s.trim > 0 ? '+' : '') + s.trim;
+  $('#tDet').checked = s.detector; $('#tOcr').checked = s.ocr; $('#tGuard').checked = s.guard;
+}
+function setSetting(k, v){ const s = {[k]:v}; Object.assign(S.settings, s); LS.set('settings', S.settings); if (S.role === 'controller' && Link.linked) cmd({k:'set', s}); else { OCR.sync(); } renderSettings(); }
+function curState(){ return S.role === 'controller' && Link.linked ? S.remote : Engine.running ? Engine.snapshot() : null; }
+let lastDetHTML = '';
+function renderLive(st){
+  const g = $('#gArc'), gc = $('#gCap'), C = 263.9;
+  if (!st){ $('#gVal').textContent = '0'; g.style.strokeDashoffset = C; return; }
+  g.style.strokeDashoffset = C * (1 - st.speed/100);
+  gc.style.strokeDashoffset = C * (1 - st.cap / 100); gc.style.opacity = st.cap < 100 ? 1 : 0;
+  $('#gVal').textContent = st.speed; $('#gSub').textContent = st.cap < 100 ? `MAX ${st.cap}%` : 'SPEED %';
+  const mc = $('#modeChip');
+  mc.className = 'chip ' + (st.mode === 'AUTO' ? 'auto' : st.mode === 'E-STOP' ? 'stop' : '');
+  mc.innerHTML = `<i style="background:${st.mode === 'AUTO' ? '#fff' : st.mode === 'MANUAL' ? '#0ea5e9' : st.mode === 'E-STOP' ? '#fff' : '#94a3b8'}"></i>${st.mode === 'AUTO' ? 'Autopilot' : st.mode === 'E-STOP' ? 'Emergency stop' : st.mode === 'MANUAL' ? 'Manual' : 'Paused'}${st.ble === false && S.role === 'controller' && Link.linked ? ' · car offline' : ''}`;
+  const rc = $('#ruleChip');
+  if (st.active){ rc.hidden = false; rc.className = 'chip ' + (st.active.kind === 'stop' ? 'stop' : 'limit'); rc.innerHTML = `${esc(st.active.label)} · ${st.active.cap === 0 || st.active.kind === 'stop' ? 'stopping' : 'max ' + st.cap + '%'}`; }
+  else rc.hidden = true;
+  $('#signChip').innerHTML = st.custom ? `<div class="sign-chip"><span class="sw" style="background:${st.custom.color}"></span><span>${esc(st.custom.name)} · ${st.custom.p}%<small>${esc(st.custom.rule)}</small></span></div>` : '';
+  const oc = $('#ocrChip'); oc.hidden = !st.ocr; oc.textContent = st.ocr ? 'Text: ' + st.ocr : '';
+  $('#fpsStat').textContent = (st.fps || 0) + ' fps';
+  const ap = $('#apBtn');
+  ap.innerHTML = st.ap ? '<svg><use href="#i-pause"/></svg><span>Pause</span>' : '<svg><use href="#i-play"/></svg><span>Start</span>';
+  ap.className = 'btn ' + (st.ap ? 'soft' : 'primary');
+  $('#apState').textContent = st.mode === 'AUTO' ? (st.active ? (st.active.kind === 'stop' ? 'Stopping' : `Limited · ${st.cap}%`) : 'Driving') : st.mode === 'E-STOP' ? 'Stopped' : st.mode === 'MANUAL' ? 'Manual' : 'Paused';
+  const rows = [];
+  if (st.custom) rows.push(`<div class="det-row"><span class="sw" style="background:${st.custom.color};width:12px;height:12px"></span><span>${esc(st.custom.name)}<small>${esc(st.custom.rule)}</small></span><span class="t"><i style="width:${st.custom.p}%;background:${st.custom.color}"></i></span><span>${st.custom.p}%</span></div>`);
+  for (const d of st.dets){ const r = Model.builtin[d.label]; rows.push(`<div class="det-row"><span class="sw" style="background:${detColor(d.label)};width:12px;height:12px"></span><span>${esc(d.label)}<small>${r ? esc(describeRule(r)) : GUARD.includes(d.label) ? 'Obstacle guard' : 'Detected'}</small></span><span class="t"><i style="width:${Math.round(d.score*100)}%;background:${detColor(d.label)}"></i></span><span>${Math.round(d.score*100)}%</span></div>`); }
+  const html = rows.join('') || '<div class="empty">Nothing detected. Road clear.</div>';
+  if (html !== lastDetHTML){ $('#detList').innerHTML = html; lastDetHTML = html; }
+}
+function detColor(l){ return l === 'person' ? '#ef4444' : l === 'stop sign' ? '#dc2626' : l === 'traffic light' ? '#f59e0b' : ['car','bus','truck','motorcycle','bicycle'].includes(l) ? '#0ea5e9' : '#8b5cf6'; }
+function renderLog(){
+  const el = $('#logList'); if (!el || !S.session) return;
+  const L = S.session.log.slice(-80).reverse();
+  el.innerHTML = L.length ? L.map(e => `<div class="log-row ${e.kind}"><time>${fmtTime(e.t).slice(0, 8)}</time><span><b>${e.kind === 'rule' ? 'Rule' : e.kind === 'stop' ? 'Stop' : e.kind === 'estop' ? 'E-stop' : 'System'}</b> · ${esc(e.text)}</span></div>`).join('') : '<div class="empty">Events will appear here</div>';
+}
+
+/* overlay drawing (boxes on the camera view) */
+function contentRect(W, H, vw, vh){ const s = Math.min(W/vw, H/vh), w = vw*s, h = vh*s; return {x:(W-w)/2, y:(H-h)/2, w, h}; }
+function rr(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+function frame(){
+  requestAnimationFrame(frame);
+  if (!S.role) return;
+  const dpr = devicePixelRatio || 1, W = stage.clientWidth, H = stage.clientHeight;
+  if (overlay.width !== Math.round(W*dpr) || overlay.height !== Math.round(H*dpr)){ overlay.width = Math.round(W*dpr); overlay.height = Math.round(H*dpr); }
+  const ctx = overlay.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  if (S.mode !== 'live') return;
+  const st = curState(); if (!st) return;
+  const remote = S.role === 'controller' && Link.linked, vid = remote ? remoteEl : camEl;
+  const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw) return;
+  const r = contentRect(W, H, vw, vh), mirror = remote ? !!st.cam?.mirror : Cam.mirror;
+  if (st.custom){ ctx.strokeStyle = st.custom.color; ctx.lineWidth = 5; ctx.globalAlpha = .9; rr(ctx, r.x + 3, r.y + 3, r.w - 6, r.h - 6, 16); ctx.stroke(); ctx.globalAlpha = 1; }
+  ctx.font = '700 12.5px "Plus Jakarta Sans",system-ui'; ctx.textBaseline = 'middle';
+  for (const d of st.dets || []){
+    const bx = mirror ? 1 - d.box.x - d.box.w : d.box.x;
+    const x = r.x + bx*r.w, y = r.y + d.box.y*r.h, w = d.box.w*r.w, h = d.box.h*r.h, col = detColor(d.label);
+    ctx.strokeStyle = col; ctx.lineWidth = 3; rr(ctx, x, y, w, h, 10); ctx.stroke();
+    const label = `${d.label} ${Math.round(d.score*100)}%`, tw = ctx.measureText(label).width + 16, ty = y > 26 ? y - 24 : y + 4;
+    ctx.fillStyle = col; rr(ctx, x, ty, tw, 21, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(label, x + 8, ty + 11);
+  }
+}
+
+/* ---------- train prediction preview ---------- */
+async function trainLoop(){
+  while (true){
+    await sleep(200);
+    if (!S.role || S.mode !== 'train' || rec || !AI.ready || (S.role === 'vehicle' && Link.linked)) continue;
+    const f = grab(); if (!f) continue;
+    let r; try { r = Model.predict(AI.embed(f)); } catch { continue; }
+    if (!r){ $('#predTop').textContent = '–'; $('#predBars').innerHTML = '<div class="empty" style="padding:6px">Add objects and record samples to see predictions here.</div>'; continue; }
+    const t = r.top, sure = t.sim >= .5;
+    $('#predTop').innerHTML = !sure ? '<span class="muted">Not sure</span>' : t.c.bg ? 'Road clear' : `<span style="color:${t.c.color}">${esc(t.c.name)}</span>`;
+    $('#predBars').innerHTML = r.list.slice(0, 4).map(x => `<div class="pbar"><span>${esc(x.c.name)}</span><span class="t"><i style="width:${Math.round(x.p*100)}%;background:${x.c.color}"></i></span><span>${Math.round(x.p*100)}%</span></div>`).join('');
+  }
+}
+
+/* ---------- drawer ---------- */
+function openDrawer(){ renderDrawer(); $('#drawer').classList.add('open'); $('#scrim').classList.add('open'); }
+function closeDrawer(){ $('#drawer').classList.remove('open'); $('#scrim').classList.remove('open'); }
+function renderDrawer(){
+  if (!S.role || !$('#drawer').classList.contains('open')) return;
+  const b = $('#drBody');
+  if (S.role === 'controller'){
+    $('#drTitle').textContent = 'Nearby vehicles';
+    const list = Link.found();
+    b.innerHTML = `
+      <div class="scan">${Link.peer?.open ? '<span class="spin"></span>' : '<i class="dot bad"></i>'}<span>${Link.peer?.open ? `Looking in fleet <b>${esc(Link.room())}</b>…` : 'Offline. Check the internet connection.'}</span></div>
+      ${list.length ? list.map(e => { const i = e.info, me = Link.linked === e; return `
+        <div class="dev ${me ? 'linked' : ''}">
+          <span class="di"><svg><use href="#i-phone"/></svg></span>
+          <div class="grow"><b>${esc(i.name)}</b><small>${i.ble ? 'Car connected' : 'Car not connected'} · ${i.learned} objects · ${i.mode === 'live' ? 'Live' : 'Train'}${i.busy && !me ? ' · busy' : ''}</small></div>
+          ${me ? `<button class="btn ghost" data-unlink style="height:36px">Disconnect</button>` : `<button class="btn primary" data-claim="${e.slot}" style="height:36px" ${i.busy ? 'disabled' : ''}>Connect</button>`}
+        </div>`; }).join('')
+      : `<div class="empty" style="padding:30px 10px"><b style="display:block;color:var(--ink);margin-bottom:6px">No vehicles yet</b>Open Cogno Pilot on the phone, choose <b>Vehicle</b> and use the fleet code <b>${esc(Link.room())}</b>.</div>`}
+      <div style="margin-top:18px">
+        <div class="kv"><span>This station</span><input id="nameIn" value="${esc(S.name)}" maxlength="20"></div>
+        <div class="kv"><span>Fleet code</span><b>${esc(Link.room())}</b></div>
+      </div>
+      <p class="hint" style="margin-top:12px">Both devices need internet for pairing. Video goes straight over your Wi-Fi when they're on the same network.</p>`;
+  } else {
+    $('#drTitle').textContent = 'This vehicle';
+    b.innerHTML = `
+      <div class="dev ${Link.linked ? 'linked' : ''}"><span class="di"><svg><use href="#i-laptop"/></svg></span><div class="grow"><b>${Link.linked ? esc(S.linkedName) : 'No Control Station'}</b><small>${Link.linked ? 'Linked · streaming camera' : Link.peer?.open ? 'Discoverable. Open Control Station on the laptop' : 'Offline'}</small></div>${Link.linked ? '<button class="btn ghost" data-vunlink style="height:36px">Unlink</button>' : ''}</div>
+      <div class="dev"><span class="di"><svg><use href="#i-bt"/></svg></span><div class="grow"><b>${BLE.connected ? esc(BLE.dev?.name || 'Car') : 'Car not connected'}</b><small>${BLE.connected ? 'Bluetooth LE · motors + LCD' : 'Turn on the ESP32 and tap Connect'}</small></div>${BLE.connected ? '<button class="btn ghost" data-bleoff style="height:36px">Disconnect</button>' : '<button class="btn primary" data-pair style="height:36px">Connect</button>'}</div>
+      <div style="margin-top:14px">
+        <div class="kv"><span>Vehicle name</span><input id="nameIn" value="${esc(S.name)}" maxlength="20"></div>
+        <div class="kv"><span>Fleet code</span><b>${esc(Link.room())}</b></div>
+        <div class="kv"><span>Objects learned</span><b>${Model.learned()}</b></div>
+      </div>`;
+  }
+}
+
+/* =====================================================================
+   EVENTS
+   ===================================================================== */
+$('#roomIn').value = S.room;
+$$('.role').forEach(b => b.onclick = () => startRole(b.dataset.role));
+$$('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$('#linkPill').onclick = openDrawer; $('#drClose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
+$('#blePill').onclick = () => BLE.connected ? openDrawer() : BLE.pair();
+$('#ckBleBtn').onclick = () => BLE.pair();
+$('#gatePair').onclick = () => BLE.pair();
+$('#gateSkip').onclick = () => { S.previewNoCar = true; updateStage(); };
+$('#emptyBtn').onclick = () => (S.role === 'controller' && Link.linked && S.mode === 'live') ? Link.send({t:'cmd', c:{k:'cam', a:'power'}}) : Cam.power(true);
+$('#unlinkBtn').onclick = () => { Link.send({t:'bye'}); try { Link.linked?.close(); } catch {} Link.unlinkVehicle('Unlinked'); };
+$('#endBtn').onclick = openEnd; $('#endCancel').onclick = () => $('#endModal').hidden = true;
+$('#endConfirm').onclick = () => endSession({wipe:$('#wipeChk').checked, alsoRemote:!$('#endRemoteRow').hidden && $('#endRemote').checked});
+$('#logDl').onclick = downloadLog;
+$$('[data-cam]').forEach(b => b.onclick = () => {
+  const a = b.dataset.cam;
+  if (S.role === 'controller' && Link.linked && S.mode === 'live') Link.send({t:'cmd', c:{k:'cam', a}}); else Cam.action(a);
+});
+$('#drBody').addEventListener('click', e => {
+  const c = e.target.closest('[data-claim]'); if (c) return Link.claim(+c.dataset.claim);
+  if (e.target.closest('[data-unlink]')) return Link.release();
+  if (e.target.closest('[data-vunlink]')) return $('#unlinkBtn').click();
+  if (e.target.closest('[data-pair]')) return BLE.pair();
+  if (e.target.closest('[data-bleoff]')) { BLE.disconnect(); renderDrawer(); renderSetup(); }
+});
+$('#drBody').addEventListener('change', e => { if (e.target.id === 'nameIn'){ S.name = e.target.value.trim() || S.name; LS.set('name.' + S.role, S.name); toast('Name saved. Other devices see it within a few seconds.'); } });
+
+/* train */
+$('#addCls').onclick = addClass; $('#newCls').onkeydown = e => { if (e.key === 'Enter') addClass(); };
+$$('#trainTabs button').forEach(b => b.onclick = () => showTab('trainTabs', b.dataset.tab));
+$$('#liveTabs button').forEach(b => b.onclick = () => showTab('liveTabs', b.dataset.tab));
+const cl = $('#clsList');
+cl.addEventListener('pointerdown', e => { const b = e.target.closest('.rec'); if (!b) return; e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch {} startRec(b.closest('.cls').dataset.id, b); });
+addEventListener('pointerup', stopRec); addEventListener('pointercancel', stopRec);
+cl.addEventListener('contextmenu', e => { if (e.target.closest('.rec')) e.preventDefault(); });
+cl.addEventListener('change', e => {
+  const c = Model.byId(e.target.closest('.cls')?.dataset.id); if (!c) return;
+  if (e.target.classList.contains('cname')){ const v = e.target.value.trim(); if (v) c.name = v; else e.target.value = c.name; renderRules(); }
+  if (e.target.classList.contains('kw')) c.keywords = e.target.value.trim();
+  Model.changed();
+});
+cl.addEventListener('click', e => {
+  const d = e.target.closest('.del');
+  if (d){ if (!d.classList.contains('arm')){ d.classList.add('arm'); d.textContent = 'Delete?'; setTimeout(() => { d.classList.remove('arm'); d.textContent = '✕'; }, 2500); return; }
+    const c = Model.byId(d.closest('.cls').dataset.id); Model.remove(c.id); renderClasses(); renderRules(); toast(`Removed “${c.name}”`); return; }
+  const rl = e.target.closest('[data-rule]');
+  if (rl){ showTab('trainTabs', 'rules'); const card = $(`.rule[data-key="c:${rl.dataset.rule}"]`); card?.scrollIntoView({behavior:'smooth', block:'center'}); card?.classList.add('flash'); setTimeout(() => card?.classList.remove('flash'), 1300); }
+});
+const rlEl = $('#ruleList');
+rlEl.addEventListener('click', e => {
+  const card = e.target.closest('.rule'); if (!card) return; const key = card.dataset.key, r = ruleFor(key);
+  const a = e.target.closest('[data-act]');
+  if (a && r){ r.action = a.dataset.act; if (r.action === 'limit' && (r.value < 10 || r.value > 100)) r.value = 60; if (r.action === 'stopgo' && (r.value < 1 || r.value > 10)) r.value = 3; Model.changed(); renderRules(); renderClasses(); }
+  if (e.target.closest('[data-delb]')){ delete Model.builtin[key.slice(2)]; Model.changed(); renderRules(); }
+});
+rlEl.addEventListener('input', e => {
+  const f = e.target.dataset.f; if (!f) return; const card = e.target.closest('.rule'), r = ruleFor(card.dataset.key); if (!r) return;
+  if (f === 'lcd') r.lcd = e.target.value.toUpperCase().slice(0, 20);
+  else { r[f] = +e.target.value; const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = f === 'value' ? (r.action === 'limit' ? r.value + '%' : r.value + ' s') : f === 'hold' ? r.hold + ' s' : r.minConf + '%'; }
+});
+rlEl.addEventListener('change', () => { Model.changed(); renderClasses(); });
+$('#addBuiltin').onclick = () => { const v = $('#builtinSel').value; if (!v) return; Model.builtin[v] = defaultRule(v); Model.changed(); renderRules(); };
+$('#exportBtn').onclick = () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(Model.toJSON(8))], {type:'application/json'}));
+  a.download = 'cogno-pilot-training.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { if (!Model.load(JSON.parse(await f.text()))) throw 0; Model.changed(); renderAll(); toast(`Imported ${Model.learned()} objects`, 'ok'); }
+  catch { toast('That file is not a Cogno Pilot training file', 'bad'); }
+  e.target.value = '';
+};
+$('#sendBtn').onclick = () => Link.sendDataset();
+
+/* live */
+$('#apBtn').onclick = () => { const st = curState(); cmd({k:'ap', on:!(st && st.ap)}); };
+$('#estopBtn').onclick = () => cmd({k:'estop'});
+$('#cruise').oninput = e => { $('#cruiseOut').textContent = e.target.value + '%'; };
+$('#cruise').onchange = e => setSetting('cruise', +e.target.value);
+$('#trim').oninput = e => { $('#trimOut').textContent = (+e.target.value > 0 ? '+' : '') + e.target.value; };
+$('#trim').onchange = e => setSetting('trim', +e.target.value);
+$('#tDet').onchange = e => setSetting('detector', e.target.checked);
+$('#tOcr').onchange = e => setSetting('ocr', e.target.checked);
+$('#tGuard').onchange = e => setSetting('guard', e.target.checked);
+
+/* manual pad */
+(() => {
+  const pad = $('#pad'), knob = $('#knob'); let on = false, x = 0, y = 0, t = null;
+  const set = (px, py) => { knob.style.left = (54 + px*54) + 'px'; knob.style.top = (54 + py*54) + 'px'; };
+  const calc = e => { const r = pad.getBoundingClientRect(); let px = (e.clientX - r.left - r.width/2)/(r.width/2), py = (e.clientY - r.top - r.height/2)/(r.height/2); const d = Math.hypot(px, py); if (d > 1){ px /= d; py /= d; } set(px, py); x = Math.round(px*100); y = Math.round(-py*100); };
+  pad.addEventListener('pointerdown', e => { on = true; pad.setPointerCapture(e.pointerId); calc(e); cmd({k:'man', x, y}); t = setInterval(() => cmd({k:'man', x, y}), 100); });
+  pad.addEventListener('pointermove', e => { if (on) calc(e); });
+  const end = () => { if (!on) return; on = false; clearInterval(t); set(0, 0); cmd({k:'man', x:0, y:0, end:true}); };
+  pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end);
+})();
+
+/* keyboard (laptop) */
+const keys = new Set(); let keyTimer = null;
+addEventListener('keydown', e => {
+  if (!S.role || S.mode !== 'live' || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+  if (e.code === 'Space'){ e.preventDefault(); cmd({k:'estop'}); return; }
+  const k = {ArrowUp:'u', KeyW:'u', ArrowDown:'d', KeyS:'d', ArrowLeft:'l', KeyA:'l', ArrowRight:'r', KeyD:'r'}[e.code]; if (!k) return;
+  e.preventDefault(); keys.add(k);
+  if (!keyTimer){ const send = () => { const y = (keys.has('u') ? 100 : 0) - (keys.has('d') ? 100 : 0), x = (keys.has('r') ? 70 : 0) - (keys.has('l') ? 70 : 0); cmd({k:'man', x, y}); }; send(); keyTimer = setInterval(send, 100); }
+});
+addEventListener('keyup', e => {
+  const k = {ArrowUp:'u', KeyW:'u', ArrowDown:'d', KeyS:'d', ArrowLeft:'l', KeyA:'l', ArrowRight:'r', KeyD:'r'}[e.code]; if (!k) return;
+  keys.delete(k); if (!keys.size && keyTimer){ clearInterval(keyTimer); keyTimer = null; cmd({k:'man', x:0, y:0, end:true}); }
+});
+
+addEventListener('beforeunload', () => { if (BLE.connected) BLE.send('S'); });
+
+/* =====================================================================
+   TICKS
+   ===================================================================== */
+let tickN = 0;
+setInterval(() => {
+  if (!S.role) return;
+  tickN++;
+  if (S.mode === 'live') renderLive(curState());
+  if (S.role === 'vehicle'){
+    if (tickN % 2 === 0) Lcd.update();
+    if (Link.linked && (S.mode === 'live' || tickN % 4 === 0)) Link.send({t:'st', ...Engine.snapshot(), mode:S.mode === 'live' ? Engine.snapshot().mode : 'TRAIN'});
+  }
+  if (tickN % 8 === 0){ renderSend(); if ($('#drawer').classList.contains('open') && !document.activeElement?.id?.startsWith('nameIn')) renderDrawer(); updateLinkPill(); }
+}, 250);
+
+if (!Model.load(LS.get('dataset', null))) Model.reset();
+renderLogos(); renderSettings(); requestAnimationFrame(frame); trainLoop();
+</script>
+</body>
+</html>
