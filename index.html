@@ -52,6 +52,8 @@ input,select{font:inherit;color:inherit}
 .icon-btn svg{width:19px;height:19px}
 .icon-btn:hover{border-color:#cfd6e6}
 .icon-btn.on{background:var(--soft);border-color:#c7cdfa;color:var(--brand)}
+.icon-btn.off{background:#fef2f2;border-color:#fecaca;color:var(--bad)}
+.icon-btn:disabled{opacity:.4;pointer-events:none}
 
 /* ================= LANDING ================= */
 #landing{min-height:100vh;background:
@@ -376,6 +378,7 @@ select.txt{appearance:auto}
     <symbol id="i-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
     <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></symbol>
     <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></symbol>
     <symbol id="i-cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3l2-3h8l2 3h3v12H3z"/><circle cx="12" cy="13" r="4"/></symbol>
   </defs>
 </svg>
@@ -526,6 +529,7 @@ select.txt{appearance:auto}
       </div>
 
       <div class="camtools">
+        <button class="icon-btn" data-cam="power" title="Turn camera off"><svg><use href="#i-power"/></svg></button>
         <button class="icon-btn" data-cam="switch" title="Switch camera"><svg><use href="#i-switch"/></svg></button>
         <button class="icon-btn" data-cam="mirror" title="Mirror view"><svg><use href="#i-mirror"/></svg></button>
         <button class="icon-btn" data-cam="flip" title="Flip upside down"><svg><use href="#i-flip"/></svg></button>
@@ -677,7 +681,7 @@ import {FilesetResolver, ImageEmbedder, ObjectDetector} from "https://cdn.jsdeli
 
 /* ---------- PUT YOUR COGNOSPACE LOGO HERE ----------
    A URL ("logo.png" next to this file) or a data:image/... string. Empty = text wordmark. */
-const COGNOSPACE_LOGO = "cognospace-logo.png";
+const COGNOSPACE_LOGO = "";
 
 const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 const EMB_MODEL = "https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite";
@@ -872,17 +876,24 @@ Cam.switch = async function(){
     await this.open({deviceId:{exact:this.devs[i].deviceId}});
   }
 };
-Cam.stop = function(){ this.stream?.getTracks().forEach(t => t.stop()); this.stream = null; camEl.srcObject = null; };
+Cam.stop = function(){ this.stream?.getTracks().forEach(t => t.stop()); this.stream = null; camEl.srcObject = null; updateStage(); renderSetup(); };
+Cam.power = async function(on){
+  if (on){ await this.start(); if (this.stream){ logEvent('system', 'Camera turned on'); if (S.role === 'vehicle' && Link.linked && !Link.call) Link.startCall(Link.linked.peer); } return; }
+  this.stop(); logEvent('system', 'Camera turned off');
+  if (Engine.ap){ Engine.handle({k:'ap', on:false}); toast('Camera off. Autopilot paused because the car cannot see.', 'warn'); }
+  else toast('Camera off');
+};
 Cam.css = c => `scale(${(c.mirror?-1:1)*(c.rot?-1:1)},${(c.flipV?-1:1)*(c.rot?-1:1)})`;
 Cam.apply = function(){ camEl.style.transform = Cam.css(this); LS.set('cam', {mirror:this.mirror, flipV:this.flipV, rot:this.rot}); renderCamTools(); };
 Cam.action = function(a){
-  if (a === 'switch') return this.switch();
+  if (a === 'power') return this.power(!this.stream);
+  if (a === 'switch') return this.stream ? this.switch() : this.power(true);
   if (a === 'mirror') this.mirror = !this.mirror;
   if (a === 'flip') this.flipV = !this.flipV;
   if (a === 'rot') this.rot = !this.rot;
   this.apply();
 };
-Cam.info = function(){ return {mirror:this.mirror, flipV:this.flipV, rot:this.rot, facing:this.facing}; };
+Cam.info = function(){ return {mirror:this.mirror, flipV:this.flipV, rot:this.rot, facing:this.facing, off:!this.stream}; };
 
 /* frame grabbing: rotate/flip go into the AI input, mirror is display-only */
 const proc = document.createElement('canvas'), pctx = proc.getContext('2d', {willReadFrequently:true});
@@ -1046,7 +1057,7 @@ const Engine = {
         } catch (e) { console.warn(e); }
         n++;
         if (performance.now() - t > 1000){ this.fps = Math.round(n * 1000 / (performance.now() - t)); n = 0; t = performance.now(); }
-      }
+      } else if (!Cam.stream){ this.dets = []; this.custom = null; this.fps = 0; this.streak.clear(); n = 0; t = performance.now(); }
       await sleep(Math.max(10, 66 - (performance.now() - t0)));
     }
   },
@@ -1115,6 +1126,7 @@ const Engine = {
   },
   handle(c){
     if (c.k === 'ap'){
+      if (c.on && !Cam.stream){ toast('Turn the camera on before starting autopilot', 'warn'); logEvent('system', 'Autopilot blocked: camera is off'); return; }
       if (c.on && S.role === 'vehicle' && !BLE.connected) toast('Car is not connected. Running as preview only.', 'warn');
       this.estop = false; this.ap = !!c.on; logEvent('system', c.on ? 'Autopilot started' : 'Autopilot paused');
     } else if (c.k === 'estop'){
@@ -1282,7 +1294,7 @@ const Link = {
       case 'busy': toast(`${e.info?.name || 'That vehicle'} is already controlled by ${d.by}`, 'warn'); break;
       case 'st':
         if (this.linked !== e) return;
-        S.remote = d; e.info = {...e.info, ble:d.ble};
+        { const wasOff = !!S.remote?.cam?.off; S.remote = d; e.info = {...e.info, ble:d.ble}; if (wasOff !== !!d.cam?.off){ updateStage(); toast(d.cam?.off ? `${S.linkedName}'s camera is off` : `${S.linkedName}'s camera is back on`, d.cam?.off ? 'warn' : 'ok'); } }
         if (S.session && d.speed > S.session.maxSpeed) S.session.maxSpeed = d.speed;
         remoteEl.style.transform = Cam.css(d.cam || {}); break;
       case 'ev': if (this.linked === e) logEvent(d.e.kind, d.e.text, {label:d.e.label, remote:true, t:d.e.t}); break;
@@ -1437,15 +1449,22 @@ function renderSetup(){
 }
 function renderCamTools(){
   const c = (S.role === 'controller' && Link.linked && S.mode === 'live' && S.remote?.cam) || Cam;
-  $$('[data-cam]').forEach(b => { const a = b.dataset.cam; b.classList.toggle('on', a === 'mirror' ? !!c.mirror : a === 'flip' ? !!c.flipV : a === 'rot' ? !!c.rot : false); });
+  const off = c === Cam ? !Cam.stream : !!c.off;
+  $$('[data-cam]').forEach(b => {
+    const a = b.dataset.cam;
+    if (a === 'power'){ b.classList.toggle('off', off); b.title = off ? 'Turn camera on' : 'Turn camera off'; return; }
+    b.disabled = off && a !== 'switch';
+  });
+  $$('[data-cam]').forEach(b => { const a = b.dataset.cam; if (a === 'power') return; b.classList.toggle('on', a === 'mirror' ? !!c.mirror : a === 'flip' ? !!c.flipV : a === 'rot' ? !!c.rot : false); });
 }
 function updateStage(){
   if (!S.role) return;
   const remote = S.role === 'controller' && Link.linked && S.mode === 'live';
   camEl.hidden = remote; remoteEl.hidden = !remote;
   const empty = $('#stageEmpty');
-  if (remote && !remoteEl.srcObject){ empty.hidden = false; $('#emptyT').textContent = 'Waiting for vehicle camera…'; $('#emptyP').textContent = `Connecting to ${S.linkedName}'s live view.`; $('#emptyBtn').hidden = true; }
-  else if (!remote && !Cam.stream){ empty.hidden = false; $('#emptyT').textContent = 'Camera is off'; $('#emptyP').textContent = 'Allow camera access to start.'; $('#emptyBtn').hidden = false; }
+  if (remote && S.remote?.cam?.off){ empty.hidden = false; $('#emptyT').textContent = 'Vehicle camera is off'; $('#emptyP').textContent = `${S.linkedName}'s camera was turned off. Autopilot can't run without it.`; $('#emptyBtn').hidden = false; }
+  else if (remote && !remoteEl.srcObject){ empty.hidden = false; $('#emptyT').textContent = 'Waiting for vehicle camera…'; $('#emptyP').textContent = `Connecting to ${S.linkedName}'s live view.`; $('#emptyBtn').hidden = true; }
+  else if (!remote && !Cam.stream){ empty.hidden = false; $('#emptyT').textContent = 'Camera is off'; $('#emptyP').textContent = S.mode === 'live' ? 'Autopilot needs the camera. Turn it on to drive.' : 'Turn it on to train objects.'; $('#emptyBtn').hidden = false; }
   else empty.hidden = true;
   $('#hud').hidden = S.mode !== 'live';
   const vehLinked = S.role === 'vehicle' && Link.linked;
@@ -1697,7 +1716,7 @@ $('#blePill').onclick = () => BLE.connected ? openDrawer() : BLE.pair();
 $('#ckBleBtn').onclick = () => BLE.pair();
 $('#gatePair').onclick = () => BLE.pair();
 $('#gateSkip').onclick = () => { S.previewNoCar = true; updateStage(); };
-$('#emptyBtn').onclick = () => Cam.start();
+$('#emptyBtn').onclick = () => (S.role === 'controller' && Link.linked && S.mode === 'live') ? Link.send({t:'cmd', c:{k:'cam', a:'power'}}) : Cam.power(true);
 $('#unlinkBtn').onclick = () => { Link.send({t:'bye'}); try { Link.linked?.close(); } catch {} Link.unlinkVehicle('Unlinked'); };
 $('#endBtn').onclick = openEnd; $('#endCancel').onclick = () => $('#endModal').hidden = true;
 $('#endConfirm').onclick = () => endSession({wipe:$('#wipeChk').checked, alsoRemote:!$('#endRemoteRow').hidden && $('#endRemote').checked});
