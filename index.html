@@ -1217,7 +1217,7 @@ function unpackVecs(p){
   return res;
 }
 const Model = {
-  classes: [], builtin: {}, ema: new Map(), updatedAt: 0,
+  classes: [], builtin: {}, ema: new Map(), updatedAt: 0, sq: true,
   byId(id){ return this.classes.find(c => c.id === id); },
   total(){ return this.classes.reduce((a, c) => a + c.vecs.length, 0); },
   learned(){ return this.classes.filter(c => !c.bg && c.vecs.length).length; },
@@ -1227,21 +1227,21 @@ const Model = {
   },
   remove(id){ this.classes = this.classes.filter(c => c.id !== id); this.changed(); },
   toJSON(maxThumbs=8){
-    return {v:1, at:this.updatedAt || Date.now(), builtin:this.builtin,
+    return {v:1, sq:this.sq ? 1 : 0, at:this.updatedAt || Date.now(), builtin:this.builtin,
       classes:this.classes.map(c => ({id:c.id, name:c.name, bg:c.bg, color:c.color, keywords:c.keywords, rule:c.rule, thumbs:c.thumbs.slice(0, maxThumbs), vecs:packVecs(c.vecs)}))};
   },
   load(j){
     if (!j || !Array.isArray(j.classes)) return false;
     this.classes = j.classes.map(c => ({...c, keywords:c.keywords || '', thumbs:c.thumbs || [], vecs:unpackVecs(c.vecs)}));
-    this.builtin = j.builtin || {}; this.updatedAt = j.at || Date.now(); this.ema.clear();
+    this.builtin = j.builtin || {}; this.updatedAt = j.at || Date.now(); this.ema.clear(); this.sq = !!j.sq || !this.classes.some(c => c.vecs?.length);
     const fix = r => { if (r && (r.minConf == null || r.minConf === 70)) r.minConf = 60; };   // old default was 70: too strict for live driving
     this.classes.forEach(c => fix(c.rule)); Object.values(this.builtin).forEach(fix);
     if (!this.classes.some(c => c.bg)) this.classes.unshift({id:uid(), name:'Clear road', bg:true, color:'#94a3b8', keywords:'', rule:null, vecs:[], thumbs:[]});
     return true;
   },
   save(){ LS.set('dataset', this.toJSON(8)); },
-  changed(){ this.updatedAt = Date.now(); this.save(); renderSend(); },
-  reset(){ this.classes = []; this.builtin = {}; this.add('Clear road', true); },
+  changed(){ if (!this.total()) this.sq = true; this.updatedAt = Date.now(); this.save(); renderSend(); },
+  reset(){ this.classes = []; this.builtin = {}; this.sq = true; this.add('Clear road', true); },
   predict(v){
     const K = 7, top = [];
     this.classes.forEach((c, ci) => { for (const s of c.vecs){
@@ -1290,7 +1290,15 @@ const AI = {
     })();
     return this.loading;
   },
-  embed(src){ const r = this.embedder.embed(src); return Float32Array.from(r.embeddings[0].floatEmbedding); },
+  /* The AI always looks at the centre SQUARE of the picture. Portrait and landscape then give it the
+     same view (same size, no squashing), so a sign trained one way is recognised the other way too. */
+  sq:null, sqx:null,
+  embed(src){
+    if (!this.sq){ this.sq = document.createElement('canvas'); this.sq.width = this.sq.height = 256; this.sqx = this.sq.getContext('2d', {willReadFrequently:true}); }
+    const s = Math.min(src.width, src.height);
+    this.sqx.drawImage(src, (src.width - s)/2, (src.height - s)/2, s, s, 0, 0, 256, 256);
+    const r = this.embedder.embed(this.sq); return Float32Array.from(r.embeddings[0].floatEmbedding);
+  },
   detect(src){
     const r = this.detector.detect(src);
     return r.detections.map(d => ({label:d.categories[0].categoryName, score:d.categories[0].score,
@@ -2301,6 +2309,7 @@ async function startRole(role){
   Cam.facing = role === 'vehicle' ? 'environment' : 'user';   // camera stays OFF until the user turns it on
   updateStage(); renderSetup(); Cam.label();
   AI.init();
+  if (!Model.sq && Model.total()) setTimeout(() => toast('Your objects were trained with the old camera format. Re-record them once so they work in both portrait and landscape.', 'warn'), 900);
   if (role === 'vehicle'){ Link.startVehicle(); BLE.auto(); wake(); logEvent('system', `Vehicle online as ${S.name}`); }
   else { Link.startController(); logEvent('system', `Control Station online as ${S.name}`); setTimeout(() => { if (!Link.linked) openDrawer(); }, 700); }
 }
@@ -2632,7 +2641,20 @@ function frame(){
   const dpr = devicePixelRatio || 1, W = stage.clientWidth, H = stage.clientHeight;
   if (overlay.width !== Math.round(W*dpr) || overlay.height !== Math.round(H*dpr)){ overlay.width = Math.round(W*dpr); overlay.height = Math.round(H*dpr); }
   const ctx = overlay.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-  if (S.mode !== 'live') return;
+  if (S.mode !== 'live'){
+    /* Train: show the square the AI actually looks at */
+    const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream || camEl.hidden) return;
+    const r = contentRect(W, H, vw, vh), q = Math.min(r.w, r.h), x = r.x + (r.w - q)/2, y = r.y + (r.h - q)/2, L = Math.min(34, q*.12);
+    ctx.save();
+    ctx.fillStyle = 'rgba(15,23,42,.18)';                                   // dim the parts the AI ignores
+    if (r.w > r.h){ ctx.fillRect(r.x, r.y, x - r.x, r.h); ctx.fillRect(x + q, r.y, r.x + r.w - x - q, r.h); }
+    else if (r.h > r.w){ ctx.fillRect(r.x, r.y, r.w, y - r.y); ctx.fillRect(r.x, y + q, r.w, r.y + r.h - y - q); }
+    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6;
+    const i = 10; ctx.beginPath();
+    for (const [cx, cy, dx, dy] of [[x+i, y+i, 1, 1], [x+q-i, y+i, -1, 1], [x+i, y+q-i, 1, -1], [x+q-i, y+q-i, -1, -1]]){ ctx.moveTo(cx, cy + dy*L); ctx.lineTo(cx, cy); ctx.lineTo(cx + dx*L, cy); }
+    ctx.stroke(); ctx.restore();
+    return;
+  }
   const st = curState(); if (!st) return;
   const remote = S.role === 'controller' && Link.linked, vid = remote ? remoteEl : camEl;
   const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw || st.cam?.off) return;
