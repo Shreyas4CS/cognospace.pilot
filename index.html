@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" id="touchIcon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2300d1bf'/%3E%3Cstop offset='1' stop-color='%232f7bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M18 44 28 20h8l10 24' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 30v4M32 40v2' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root{
@@ -29,8 +29,8 @@
   --r:20px;
   --sh:0 1px 2px rgba(10,40,70,.04),0 12px 32px rgba(10,60,100,.07);
   --sh2:0 2px 8px rgba(10,40,70,.06),0 26px 60px rgba(20,140,220,.16);
-  --fd:'Chakra Petch','Outfit',system-ui,sans-serif;
-  --fb:'Outfit',system-ui,-apple-system,sans-serif;
+  --fd:'Fredoka','Nunito',system-ui,sans-serif;
+  --fb:'Sora','Segoe UI',system-ui,-apple-system,sans-serif;
   --bar:64px;
 }
 *{box-sizing:border-box}
@@ -733,10 +733,10 @@ select.txt{appearance:auto}
             <g fill="#1f2937"><circle cx="400" cy="104" r="5"/><circle cx="415" cy="108" r="4"/><path d="M394 112 l-6 22 h5 l3-9 3 9h5zM411 115 l-4 17 h4 l2-7 2 7 h4z"/></g>
             <ellipse cx="407" cy="122" rx="62" ry="66" fill="url(#halo)" stroke="#14c6c0" stroke-width="2.5"/>
             <rect x="358" y="40" width="110" height="24" rx="8" fill="url(#bx)"/>
-            <text x="368" y="57" font-family="Outfit,Arial" font-size="13" font-weight="700" fill="#fff">School sign 94%</text>
+            <text x="368" y="57" font-family="Sora,Arial" font-size="13" font-weight="700" fill="#fff">School sign 94%</text>
             <rect x="122" y="318" width="316" height="54" rx="10" fill="none" stroke="#10b981" stroke-width="3"/>
             <rect x="122" y="296" width="132" height="22" rx="7" fill="#10b981"/>
-            <text x="131" y="312" font-family="Outfit,Arial" font-size="12.5" font-weight="700" fill="#fff">Zebra crossing 88%</text>
+            <text x="131" y="312" font-family="Sora,Arial" font-size="12.5" font-weight="700" fill="#fff">Zebra crossing 88%</text>
           </svg>
         </div>
         <div class="float f1"><span class="fi" style="background:#fff7e6;color:#b45309"><svg width="18" height="18"><use href="#i-gauge"/></svg></span><span>Speed capped at 40%<small>School zone rule</small></span></div>
@@ -801,11 +801,9 @@ select.txt{appearance:auto}
   <main class="layout">
     <!-- ===== LIVE: cockpit status strip ===== -->
     <div class="hud-strip" id="hudStrip">
-      <span class="hs-edge l"></span>
       <div class="hs-cell"><small>SPEED</small><b><span id="hsSpeed">0</span><em>%</em></b></div>
       <div class="hs-title"><b id="apState" class="idle">AUTOPILOT READY</b><small id="hsSub">Road clear</small></div>
       <div class="hs-cell r"><small>SESSION</small><b id="hsTime">00:00</b></div>
-      <span class="hs-edge r"></span>
     </div>
 
     <!-- ===== LIVE: left column ===== -->
@@ -919,7 +917,7 @@ select.txt{appearance:auto}
         <h3>Vehicle setup</h3>
         <p class="sub">Finish these before you mount the phone on the car.</p>
         <div class="checklist">
-          <div class="ck" id="ckCam"><span class="cki"><svg><use href="#i-check"/></svg></span><span>Camera on</span></div>
+          <div class="ck" id="ckCam"><span class="cki"><svg><use href="#i-check"/></svg></span><span>Camera on</span><button id="ckCamBtn">Turn on</button></div>
           <div class="ck" id="ckBle"><span class="cki"><svg><use href="#i-check"/></svg></span><span>Car connected (Bluetooth)</span><button id="ckBleBtn">Connect</button></div>
           <div class="ck" id="ckLink"><span class="cki"><svg><use href="#i-check"/></svg></span><span id="ckLinkTxt">Waiting for Control Station</span></div>
         </div>
@@ -2160,7 +2158,8 @@ async function startRole(role){
   $('#landing').hidden = true; $('#app').hidden = false; window.scrollTo(0, 0);
   if (role === 'controller' && LS.get('cam', null) == null) Cam.mirror = true;
   Cam.apply(); renderAll();
-  await Cam.start(role === 'vehicle' ? 'environment' : 'user');
+  Cam.facing = role === 'vehicle' ? 'environment' : 'user';   // camera stays OFF until the user turns it on
+  updateStage(); renderSetup(); Cam.label();
   AI.init();
   if (role === 'vehicle'){ Link.startVehicle(); BLE.auto(); wake(); logEvent('system', `Vehicle online as ${S.name}`); }
   else { Link.startController(); logEvent('system', `Control Station online as ${S.name}`); setTimeout(() => { if (!Link.linked) openDrawer(); }, 700); }
@@ -2230,7 +2229,7 @@ function renderBle(){
 function renderSetup(){
   const v = S.role === 'vehicle';
   $('#setupCard').hidden = !v || (S.mode === 'live') || (!!Cam.stream && BLE.connected && !!Link.linked);
-  $('#ckCam').classList.toggle('done', !!Cam.stream);
+  $('#ckCam').classList.toggle('done', !!Cam.stream); $('#ckCamBtn').hidden = !!Cam.stream;
   $('#ckBle').classList.toggle('done', BLE.connected); $('#ckBleBtn').hidden = BLE.connected;
   $('#ckLink').classList.toggle('done', !!Link.linked);
   $('#ckLinkTxt').textContent = Link.linked ? `Linked to ${S.linkedName}` : `Waiting for Control Station · fleet “${Link.room()}”`;
@@ -2512,7 +2511,7 @@ function frame(){
   /* custom object: glowing frame */
   if (st.custom){ ctx.save(); ctx.strokeStyle = st.custom.color; ctx.shadowColor = st.custom.color; ctx.shadowBlur = 22; ctx.lineWidth = 4; ctx.globalAlpha = .9; rr(ctx, r.x + 4, r.y + 4, r.w - 8, r.h - 8, 20); ctx.stroke(); ctx.restore(); }
   /* detections: soft halos */
-  ctx.font = '600 12.5px Outfit,system-ui'; ctx.textBaseline = 'middle';
+  ctx.font = '500 12px Sora,system-ui'; ctx.textBaseline = 'middle';
   for (const d of st.dets || []){
     const bx = mirror ? 1 - d.box.x - d.box.w : d.box.x;
     const x = r.x + bx*r.w, y = r.y + d.box.y*r.h, w = d.box.w*r.w, h = d.box.h*r.h, col = detColor(d.label), cx = x + w/2, cy = y + h/2, rx = w*.62, ry = h*.6;
@@ -2597,6 +2596,7 @@ $$('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 $('#linkPill').onclick = openDrawer; $('#drClose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
 $('#blePill').onclick = () => BLE.connected ? openDrawer() : BLE.pair();
 $('#ckBleBtn').onclick = () => BLE.pair();
+$('#ckCamBtn').onclick = () => Cam.power(true);
 $('#gatePair').onclick = () => BLE.pair();
 $('#gateSkip').onclick = () => { S.previewNoCar = true; updateStage(); };
 $('#emptyBtn').onclick = () => (S.role === 'controller' && Link.linked && S.mode === 'live') ? Link.send({t:'cmd', c:{k:'cam', a:'power'}}) : Cam.power(true);
