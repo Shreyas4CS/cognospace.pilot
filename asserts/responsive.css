@@ -214,3 +214,17 @@
 @media (min-width:641px) and (max-width:820px){
   .bar .brand{display:none}
 }
+
+/* ---- test trained objects ---- */
+@media (max-width:640px){
+  .test-badge{bottom:10px;font-size:13.5px;padding:6px 13px 6px 8px;gap:7px}
+  .test-badge .tb-k{font-size:9.5px;padding:2px 7px}
+  .tst-h .btn{height:36px;padding:0 13px;font-size:13px}
+  .tst-now{padding:10px 12px;margin:10px 0 6px}
+  .tst-now b{font-size:17px}.tst-now span{font-size:16px}
+  .tst-row{padding:8px 9px}
+  .tst-row .nm b{font-size:13.5px}.tst-row .nm small{font-size:11.5px}
+}
+@media (max-height:540px) and (orientation:landscape){
+  .test-badge{bottom:8px;font-size:13px;padding:5px 12px 5px 7px}
+}

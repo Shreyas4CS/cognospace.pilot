@@ -233,6 +233,35 @@ footer{border-top:1px solid var(--line);background:#ffffffcc;margin-top:30px}
 .pbar .t i{display:block;height:100%;border-radius:9px;transition:width .25s}
 .pbar span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pbar span:last-child{text-align:right;color:var(--muted);font-family:var(--fd)}
+/* ---- test trained objects (phone) ---- */
+.test-badge{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:9px;max-width:calc(100% - 24px);background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-radius:99px;padding:8px 16px 8px 10px;box-shadow:var(--sh);font-family:var(--fd);font-weight:700;font-size:15px;white-space:nowrap}
+.test-badge .tb-k{font-size:10.5px;letter-spacing:.14em;color:#fff;background:var(--grad);border-radius:99px;padding:3px 8px}
+.test-badge .tb-n{overflow:hidden;text-overflow:ellipsis}
+.test-badge .tb-p{font-family:var(--fm,'JetBrains Mono',monospace);font-size:13px;color:var(--muted)}
+.tst-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tst-h h3{margin:0}
+.tst-h .btn{height:38px;padding:0 16px;font-size:13.5px;flex:none}
+.tst-now{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:#fff;border-radius:16px;padding:12px 14px;margin:12px 0 8px}
+.tst-now .sw{width:14px;height:14px;border-radius:5px;flex:none}
+.tst-now b{font-family:var(--fd);font-size:19px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tst-now span{font-family:var(--fd);font-weight:700;font-size:18px}
+.tst-sum{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px;letter-spacing:.04em}
+.tst-sum b{color:var(--ink);font-family:var(--fd);font-size:14px}
+.tst-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:14px;margin-bottom:7px;background:#fff;transition:.2s}
+.tst-row .sw{width:11px;height:11px;border-radius:4px;flex:none}
+.tst-row .nm{flex:1;min-width:0}
+.tst-row .nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tst-row .nm small{font-size:12px;color:var(--muted)}
+.tst-row .st{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;border:2px solid var(--line2);color:transparent}
+.tst-row .st svg{width:14px;height:14px}
+.tst-row.ok{border-color:rgba(18,193,140,.45);background:rgba(18,193,140,.06)}
+.tst-row.ok .st{background:var(--ok);border-color:var(--ok);color:#fff}
+.tst-row.now{box-shadow:0 0 0 2px var(--hl,#2f7bff) inset}
+.tst-row .warn{color:#b45309}
+.tst-acts{display:flex;gap:8px;margin-top:10px}
+.tst-acts .btn{flex:1;height:40px;font-size:13.5px}
+.ptest-now{display:flex;align-items:center;gap:10px;margin-top:10px;font-family:var(--fd);font-weight:700;font-size:17px}
+.ptest-now .sw{width:12px;height:12px;border-radius:4px}
 
 /* ---- side panels / cards ---- */
 .side{display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -854,6 +883,8 @@ select.txt{appearance:auto}
         <p class="hint">Hold &amp; drag. Overrides autopilot while held.</p>
       </div>
 
+      <div class="test-badge" id="testBadge" hidden><span class="tb-k">TEST</span><span class="tb-n" id="tbName">Looking…</span><span class="tb-p" id="tbP"></span></div>
+
       <div class="banner" id="ctrlBanner" hidden><i class="dot on"></i><span id="ctrlTxt"></span></div>
 
       <div class="stage-empty" id="stageEmpty" hidden>
@@ -923,6 +954,18 @@ select.txt{appearance:auto}
         </div>
       </div>
 
+      <div class="card" id="testCard" hidden>
+        <div class="tst-h"><h3><svg width="17" height="17"><use href="#i-eye"/></svg> Test trained objects</h3><button class="btn primary" id="testBtn">Start test</button></div>
+        <p class="sub" id="testSub" style="margin-top:6px">Check the training before you drive. Hold each sign in front of the camera. It gets a tick once the phone recognises it steadily.</p>
+        <div id="testBody" hidden>
+          <div class="tst-now"><span class="sw" id="tnSw" style="background:#cbd5e1"></span><b id="tnName">Looking…</b><span id="tnP"></span></div>
+          <div id="testBars"></div>
+          <div class="tst-sum"><span>RESULTS</span><b id="testScore">0 / 0 recognised</b></div>
+          <div id="testList"></div>
+          <div class="tst-acts"><button class="btn soft" id="testReset">Reset results</button><button class="btn ghost" id="testStop">Stop test</button></div>
+        </div>
+      </div>
+
       <div class="card" id="linkedTrainCard" hidden>
         <h3><i class="dot on"></i> <span id="ltTitle">Linked</span></h3>
         <p class="sub" id="ltSub">Training happens on the Control Station. New objects and rules arrive here when they're sent.</p>
@@ -964,6 +1007,12 @@ select.txt{appearance:auto}
           <p class="sub" id="sendSub" style="margin-bottom:12px">Link a vehicle to send your objects and rules.</p>
           <button class="btn primary block" id="sendBtn" disabled><svg><use href="#i-send"/></svg><span id="sendTxt">Send training</span></button>
           <div class="prog" id="sendProg" hidden><i></i></div>
+        </div>
+        <div class="card" id="phoneTestCard" hidden>
+          <h3><svg width="17" height="17"><use href="#i-eye"/></svg> Phone test</h3>
+          <p class="sub" id="ptSub">The phone is testing your training.</p>
+          <div class="ptest-now"><span class="sw" id="ptSw" style="background:#cbd5e1"></span><span id="ptName">Looking…</span></div>
+          <div class="kv" style="border:0;padding-bottom:0"><span>Recognised</span><b id="ptScore">0 / 0</b></div>
         </div>
       </div>
     </aside>
@@ -1684,7 +1733,7 @@ const Link = {
       case 'ds2':
         if (mine && this.rx?.id === d.id && this.rx.got === this.rx.n){
           try {
-            Model.load(JSON.parse(this.rx.parts.join(''))); Model.save(); S.synced = Date.now();
+            Model.load(JSON.parse(this.rx.parts.join(''))); Model.save(); S.synced = Date.now(); Test.res = {};
             conn.send({t:'dsok', learned:Model.learned(), samples:Model.total()});
             toast(`New training received: ${Model.learned()} objects`, 'ok'); logEvent('system', `Training received (${Model.learned()} objects, ${Model.total()} samples)`);
             Lcd.msg(['TRAINING RECEIVED', Model.learned() + ' OBJECTS', Model.total() + ' SAMPLES', '']);
@@ -1761,6 +1810,7 @@ const Link = {
         if (S.session && d.speed > S.session.maxSpeed) S.session.maxSpeed = d.speed;
         remoteEl.style.transform = Cam.css(d.cam || {}); break;
       case 'ev': if (this.linked === e) logEvent(d.e.kind, d.e.text, {label:d.e.label, remote:true, t:d.e.t}); break;
+      case 'test': if (this.linked === e){ S.ptest = d; renderPhoneTest(); } break;
       case 'dsok': S.synced = Date.now(); S.lastSent = Date.now(); toast(`Vehicle learned ${d.learned} objects`, 'ok'); renderSend(); break;
       case 'dserr': toast('Transfer failed. Please send again.', 'bad'); renderSend(); break;
       case 'ended': break;
@@ -1773,7 +1823,7 @@ const Link = {
   },
   release(silent){ if (!this.linked) return; this.send({t:'release'}); this.unlinkController(silent ? '' : 'Vehicle unlinked'); },
   unlinkController(msg){
-    this.linked = null; S.remote = null; S.linkedName = '';
+    this.linked = null; S.remote = null; S.linkedName = ''; S.ptest = null;
     try { this.call?.close(); } catch {} this.call = null; remoteEl.srcObject = null;
     if (msg){ toast(msg, 'warn'); logEvent('system', msg); }
     setLink('wait', 'Searching…'); syncEngine(); renderAll();
@@ -2111,6 +2161,90 @@ Pack.downloadImages = async function(){
 /* =====================================================================
    SESSION LOG
    ===================================================================== */
+/* ---------- phone: test trained objects ---------- */
+const Test = {
+  on:false, res:{}, streak:{id:null, n:0}, cur:null, lastSend:0,
+  available(){ return S.role === 'vehicle' && S.mode === 'train'; },
+  objs(){ return Model.classes.filter(c => c.vecs.length).sort((a, b) => (a.bg ? 1 : 0) - (b.bg ? 1 : 0)); },
+  score(){ const o = this.objs().filter(c => !c.bg); return {ok:o.filter(c => this.res[c.id]?.ok).length, total:o.length}; },
+  async start(){
+    if (!Model.learned()){ toast(Link.linked ? 'No trained objects yet. Send training from the Control Station first.' : 'No trained objects yet. Train some objects first.', 'warn'); return; }
+    if (!Cam.stream){ await Cam.power(true); if (!Cam.stream) return; }
+    if (!AI.ready) toast('AI is still loading. The test starts as soon as it is ready.');
+    this.on = true; this.cur = null; this.streak = {id:null, n:0};
+    logEvent('system', 'Training test started'); this.render(); this.report(true);
+  },
+  stop(){ if (!this.on) return; this.on = false; this.cur = null; this.render(); this.report(true); },
+  reset(){ this.res = {}; this.streak = {id:null, n:0}; this.render(); this.report(true); },
+  step(r){
+    if (!r) this.cur = null;
+    else {
+      const t = r.top, sure = t.sim >= .5 && t.p >= .55;
+      this.cur = {c:t.c, p:t.p, sure, list:r.list};
+      if (sure){
+        this.streak = this.streak.id === t.c.id ? {id:t.c.id, n:this.streak.n + 1} : {id:t.c.id, n:1};
+        const o = this.res[t.c.id] || (this.res[t.c.id] = {best:0, ok:false});
+        o.best = Math.max(o.best, t.p);
+        if (this.streak.n >= 3 && !o.ok){ o.ok = true; if (!t.c.bg) Lcd.msg(['TEST: RECOGNISED', t.c.name.toUpperCase().slice(0, 20), Math.round(t.p*100) + '% SURE', '']); }
+      } else this.streak = {id:null, n:0};
+    }
+    this.renderLive(); this.report();
+  },
+  label(){ const c = this.cur; return !c ? (Cam.stream ? 'Looking…' : 'Camera is off') : !c.sure ? 'Not sure' : c.c.bg ? 'Clear road' : c.c.name; },
+  report(force=false){
+    if (S.role !== 'vehicle' || !Link.linked) return;
+    const now = Date.now(); if (!force && now - this.lastSend < 400) return; this.lastSend = now;
+    const c = this.cur, sc = this.score();
+    Link.send({t:'test', on:this.on, name:this.label(), color:c?.sure ? c.c.color : '#cbd5e1', p:c ? Math.round(c.p*100) : 0, sure:!!c?.sure, ok:sc.ok, total:sc.total});
+  },
+  render(){
+    const card = $('#testCard'); if (!card) return;
+    if (this.on && !this.available()){ this.on = false; this.cur = null; this.report(true); }
+    card.hidden = !this.available();
+    $('#testBtn').hidden = this.on; $('#testBody').hidden = !this.on; $('#testSub').hidden = this.on;
+    $('#testBtn').disabled = !Model.learned();
+    $('#testBadge').hidden = !this.on || S.mode !== 'train';
+    this.renderLive();
+  },
+  renderLive(){
+    if (!this.on) return;
+    const c = this.cur, name = this.label(), col = c?.sure ? c.c.color : '#cbd5e1', pct = c?.sure ? Math.round(c.p*100) + '%' : '';
+    $('#tnName').textContent = name; $('#tnSw').style.background = col; $('#tnP').textContent = pct; $('#tnP').style.color = col;
+    $('#tbName').textContent = name; $('#tbName').style.color = c?.sure ? col : 'var(--muted)'; $('#tbP').textContent = pct;
+    $('#testBars').innerHTML = c ? c.list.slice(0, 3).map(x => `<div class="pbar"><span>${esc(x.c.name)}</span><span class="t"><i style="width:${Math.round(x.p*100)}%;background:${x.c.color}"></i></span><span>${Math.round(x.p*100)}%</span></div>`).join('') : '';
+    const sc = this.score(); $('#testScore').textContent = `${sc.ok} / ${sc.total} recognised`;
+    $('#testList').innerHTML = this.objs().map(o => {
+      const r = this.res[o.id], few = o.vecs.length < 15, now = c?.sure && c.c === o;
+      const note = r?.ok ? `Recognised · best ${Math.round(r.best*100)}%`
+        : r ? `Seen briefly · best ${Math.round(r.best*100)}%. Hold it steady`
+        : o.bg ? 'Point at the empty floor' : 'Not seen yet';
+      return `<div class="tst-row${r?.ok ? ' ok' : ''}${now ? ' now' : ''}" style="--hl:${o.color}">
+        <span class="sw" style="background:${o.color}"></span>
+        <span class="nm"><b>${esc(o.name)}</b><small>${note}${few && !r?.ok ? ` · <span class="warn">only ${o.vecs.length} samples</span>` : ''}</small></span>
+        <span class="st"><svg><use href="#i-check"/></svg></span></div>`;
+    }).join('');
+  }
+};
+function renderPhoneTest(){
+  const card = $('#phoneTestCard'); if (!card) return;
+  const d = S.ptest, show = S.role === 'controller' && !!Link.linked && !!d?.on;
+  card.hidden = !show; if (!show) return;
+  $('#ptSub').textContent = `${S.linkedName} is testing your training. Hold each sign in front of its camera.`;
+  $('#ptName').textContent = d.name + (d.sure ? ` · ${d.p}%` : ''); $('#ptName').style.color = d.sure ? d.color : 'var(--muted)';
+  $('#ptSw').style.background = d.color; $('#ptScore').textContent = `${d.ok} / ${d.total}`;
+}
+async function testLoop(){
+  while (true){
+    await sleep(180);
+    if (!Test.on) continue;
+    if (!Test.available()){ Test.render(); continue; }
+    if (!AI.ready) continue;
+    const f = grab(); if (!f){ if (Test.cur){ Test.cur = null; Test.renderLive(); Test.report(); } continue; }
+    let r; try { r = Model.predict(AI.embed(f)); } catch { continue; }
+    Test.step(r);
+  }
+}
+
 function newSession(){ S.session = {start:Date.now(), liveMs:0, liveSince:null, triggers:{}, maxSpeed:0, estops:0, log:[]}; }
 function logEvent(kind, text, x={}){
   if (!S.session) return;
@@ -2205,6 +2339,7 @@ async function endSession({wipe=false, alsoRemote=false, by=null, home=false}={}
   OCR.stop(); Link.destroy(); Cam.stop(); closeDrawer();
   try { wakeLock?.release(); } catch {} wakeLock = null;
   if (wipe){ ['dataset', 'settings', 'cam', 'name.vehicle', 'name.controller'].forEach(k => LS.del(k)); Model.reset(); S.settings = {cruise:60, trim:0, detector:true, ocr:false, guard:true, guardArea:10}; Cam.mirror = Cam.flipV = Cam.rot = false; }
+  Test.on = false; Test.res = {}; Test.cur = null; S.ptest = null;
   S.role = null; S.session = null; S.remote = null; S.mode = 'train';
   $('#app').hidden = true; $('#landing').hidden = false; window.scrollTo(0, 0);
   toast(home ? 'Back home. Your training data, rules and settings are saved.' : by ? `Session ended by ${by}${wipe ? '. Device data erased' : ''}` : wipe ? 'Session ended. Device data erased' : 'Session ended. Training data kept on this device', 'ok');
@@ -2258,7 +2393,7 @@ function updateStage(){
   else empty.hidden = true;
   $('#hud').hidden = S.mode !== 'live';
   const vehLinked = S.role === 'vehicle' && Link.linked;
-  $('#predict').hidden = S.mode !== 'train' || vehLinked;
+  $('#predict').hidden = S.mode !== 'train' || vehLinked || Test.on;
   $('#ctrlBanner').hidden = !vehLinked; $('#ctrlTxt').textContent = `Controlled by ${S.linkedName}`;
   $('#bleGate').hidden = !(S.role === 'vehicle' && S.mode === 'live' && !BLE.connected && !S.previewNoCar);
   $('#fpsStat').hidden = S.mode !== 'live';
@@ -2279,7 +2414,7 @@ function renderAll(){
   $('#ltTitle').textContent = `Linked to ${S.linkedName || 'Control Station'}`;
   $('#ltObjs').textContent = Model.learned(); $('#ltSamples').textContent = Model.total(); $('#ltWhen').textContent = ago(S.synced);
   $('#liveHint').hidden = S.role !== 'controller' || isMobile;
-  updateLinkPill(); renderBle(); renderSetup(); updateStage(); renderClasses(); renderRules(); renderSend(); renderSettings(); renderDrawer(); renderLog();
+  updateLinkPill(); renderBle(); renderSetup(); updateStage(); renderClasses(); renderRules(); renderSend(); renderSettings(); renderDrawer(); renderLog(); Test.render(); renderPhoneTest();
 }
 
 /* ---------- train: object list ---------- */
@@ -2514,7 +2649,7 @@ function frame(){
 async function trainLoop(){
   while (true){
     await sleep(200);
-    if (!S.role || S.mode !== 'train' || rec || !AI.ready || (S.role === 'vehicle' && Link.linked)) continue;
+    if (!S.role || S.mode !== 'train' || rec || !AI.ready || Test.on || (S.role === 'vehicle' && Link.linked)) continue;
     const f = grab(); if (!f) continue;
     let r; try { r = Model.predict(AI.embed(f)); } catch { continue; }
     if (!r){ $('#predTop').textContent = '–'; $('#predBars').innerHTML = '<div class="empty" style="padding:6px">Add objects and record samples to see predictions here.</div>'; continue; }
@@ -2580,6 +2715,9 @@ $('#linkPill').onclick = openDrawer; $('#drClose').onclick = closeDrawer; $('#sc
 $('#blePill').onclick = () => BLE.connected ? openDrawer() : BLE.pair();
 $('#ckBleBtn').onclick = () => BLE.pair();
 $('#ckCamBtn').onclick = () => Cam.power(true);
+$('#testBtn').onclick = () => Test.start();
+$('#testStop').onclick = () => Test.stop();
+$('#testReset').onclick = () => Test.reset();
 $('#gatePair').onclick = () => BLE.pair();
 $('#gateSkip').onclick = () => { S.previewNoCar = true; updateStage(); };
 $('#emptyBtn').onclick = () => (S.role === 'controller' && Link.linked && S.mode === 'live') ? Link.send({t:'cmd', c:{k:'cam', a:'power'}}) : Cam.power(true);
@@ -2737,7 +2875,7 @@ function setFavicon(){
   img.onload = () => { $('#favIcon').href = FAVICON; $('#touchIcon').href = FAVICON; };   // only switch if the file really exists
   img.src = FAVICON;
 }
-setFavicon(); renderLogos(); Speedo.init(); renderSettings(); requestAnimationFrame(frame); trainLoop();
+setFavicon(); renderLogos(); Speedo.init(); renderSettings(); requestAnimationFrame(frame); trainLoop(); testLoop();
 </script>
 </body>
 </html>
