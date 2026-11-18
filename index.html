@@ -211,6 +211,7 @@ footer{border-top:1px solid var(--line);background:#ffffffcc;margin-top:30px}
 .gauge .gv small{display:block;font-family:var(--fd);font-size:9.5px;font-weight:600;color:var(--muted);margin-top:3px;letter-spacing:.1em}
 .hud-b{position:absolute;left:14px;right:14px;bottom:14px;display:flex;justify-content:flex-end;align-items:flex-end;gap:10px}
 .info-card{display:flex;flex-direction:column;gap:8px;align-items:flex-end;max-width:60%}
+.sign-chip.guess{opacity:.78;border-style:dashed;border-color:#cbd5e1}
 .sign-chip{display:flex;align-items:center;gap:11px;padding:10px 15px 10px 10px;border-radius:16px;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(10,60,100,.16);font-weight:600;border:1px solid rgba(255,255,255,.8)}
 .sign-chip .sw{width:32px;height:32px;border-radius:10px}
 .sign-chip small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
@@ -1262,6 +1263,16 @@ const Model = {
   classify(v){
     const r = this.predict(v); if (!r) return null;
     const t = r.top; return {c:t.c, p:t.p, sim:t.sim, sure:this.sure(t)};
+  },
+  /* Look at a camera frame: the whole centre square first, then a closer look at the middle
+     (a sign seen from the car is smaller/farther than when it was trained). Used by Test AND Live. */
+  look(f){
+    const a = this.predict(AI.embed(f)); if (!a) return null;
+    a.sure = this.sure(a.top); if (a.sure && !a.top.c.bg) return a;
+    const b = this.predict(AI.embed(f, .6));
+    if (b){ b.sure = this.sure(b.top); if (b.sure && !b.top.c.bg) return b; }
+    if (b){ const ga = a.list.find(x => !x.c.bg), gb = b.list.find(x => !x.c.bg); if (gb && (!ga || gb.p > ga.p)) a.guess = gb; }
+    return a;
   }
 };
 
@@ -1293,9 +1304,9 @@ const AI = {
   /* The AI always looks at the centre SQUARE of the picture. Portrait and landscape then give it the
      same view (same size, no squashing), so a sign trained one way is recognised the other way too. */
   sq:null, sqx:null,
-  embed(src){
+  embed(src, zoom=1){
     if (!this.sq){ this.sq = document.createElement('canvas'); this.sq.width = this.sq.height = 256; this.sqx = this.sq.getContext('2d', {willReadFrequently:true}); }
-    const s = Math.min(src.width, src.height);
+    const s = Math.min(src.width, src.height) * zoom;
     this.sqx.drawImage(src, (src.width - s)/2, (src.height - s)/2, s, s, 0, 0, 256, 256);
     const r = this.embedder.embed(this.sq); return Float32Array.from(r.embeddings[0].floatEmbedding);
   },
@@ -1572,12 +1583,13 @@ const Engine = {
     while (this.running){
       const t0 = performance.now(), f = AI.ready ? grab() : null;
       if (f){
-        try {
-          this.custom = Model.classify(AI.embed(f));                       // custom signs: every frame (fast reaction)
-          if (S.settings.detector){ if (n % 3 === 0) this.dets = AI.detect(f); }  // COCO detector: every 3rd frame
-          else this.dets = [];
-          this.perceive();
-        } catch (e) { console.warn(e); }
+        /* each step is guarded on its own: a detector hiccup must never stop the sign rules */
+        try { const r = Model.look(f);                                     // custom signs: every frame (fast reaction)
+              this.custom = r ? {c:r.top.c, p:r.top.p, sim:r.top.sim, sure:r.sure, guess:r.guess || r.list.find(x => !x.c.bg)} : null; }
+        catch (e) { console.warn('embed', e); }
+        if (S.settings.detector){ if (n % 3 === 0){ try { this.dets = AI.detect(f); } catch (e) { console.warn('detect', e); this.dets = []; } } }   // COCO detector: every 3rd frame
+        else this.dets = [];
+        try { this.perceive(); } catch (e) { console.warn('perceive', e); }
         n++;
         if (performance.now() - t > 1000){ this.fps = Math.round(n * 1000 / (performance.now() - t)); n = 0; t = performance.now(); }
       } else if (!Cam.stream){ this.dets = []; this.custom = null; this.fps = 0; this.streak.clear(); n = 0; t = performance.now(); }
@@ -1674,6 +1686,7 @@ const Engine = {
       speed:Math.round(this.speed), cap: act ? act.cap : 100, active: act ? {label:act.label, kind:act.kind, lcd:act.lcd} : null,
       dets: this.dets.slice(0, 8).map(d => ({label:d.label, score:+d.score.toFixed(2), box:{x:+d.box.x.toFixed(3), y:+d.box.y.toFixed(3), w:+d.box.w.toFixed(3), h:+d.box.h.toFixed(3)}})),
       custom: cu ? {name:cu.c.name, color:cu.c.color, p:Math.round(cu.p*100), rule:describeRule(cu.c.rule)} : null,
+      guess: !cu && this.custom?.guess && this.custom.guess.p >= .25 ? {name:this.custom.guess.c.name, color:this.custom.guess.c.color, p:Math.round(this.custom.guess.p*100), need:Math.round(Model.need(this.custom.guess.c)*100)} : null,
       ocr: OCR.text.slice(0, 60), ble:BLE.connected, fps:this.fps, cam:Cam.info(), learned:Model.learned()
     };
   }
@@ -2254,7 +2267,7 @@ async function testLoop(){
     if (!Test.available()){ Test.render(); continue; }
     if (!AI.ready) continue;
     const f = grab(); if (!f){ if (Test.cur){ Test.cur = null; Test.renderLive(); Test.report(); } continue; }
-    let r; try { r = Model.predict(AI.embed(f)); } catch { continue; }
+    let r; try { r = Model.look(f); } catch { continue; }
     Test.step(r);
   }
 }
@@ -2563,7 +2576,8 @@ function renderLive(st){
   $$('#gears span').forEach(sp => { const on = sp.dataset.g === mode; sp.classList.toggle('on', on); sp.classList.toggle('stop', on && mode === 'E-STOP'); });
   const bl = $('#spBle'), car = st?.ble; bl.className = 'sp-corner l ' + (car ? 'good' : 'bad'); bl.lastElementChild.textContent = car ? 'CAR' : 'NO CAR';
   $('#spAi').lastElementChild.textContent = `${st?.fps || 0} FPS`;
-  $('#signChip').innerHTML = st?.custom ? `<div class="sign-chip"><span class="sw" style="background:${st.custom.color}"></span><span>${esc(st.custom.name)} · ${st.custom.p}%<small>${esc(st.custom.rule)}</small></span></div>` : '';
+  $('#signChip').innerHTML = st?.custom ? `<div class="sign-chip"><span class="sw" style="background:${st.custom.color}"></span><span>${esc(st.custom.name)} · ${st.custom.p}%<small>${esc(st.custom.rule)}</small></span></div>`
+    : st?.guess ? `<div class="sign-chip guess"><span class="sw" style="background:${st.guess.color}"></span><span>${esc(st.guess.name)}? ${st.guess.p}%<small>Needs ${st.guess.need}% to act. Move closer</small></span></div>` : '';
   const oc = $('#ocrChip'); oc.hidden = !st?.ocr; oc.textContent = st?.ocr ? 'Text: ' + st.ocr : '';
   $('#fpsStat').textContent = (st?.fps || 0) + ' fps';
   const apb = $('#apBtn');
@@ -2656,6 +2670,11 @@ function frame(){
     return;
   }
   const st = curState(); if (!st) return;
+  { const vw0 = (S.role === 'controller' && Link.linked ? remoteEl : camEl).videoWidth, vh0 = (S.role === 'controller' && Link.linked ? remoteEl : camEl).videoHeight;
+    if (vw0 && !st.cam?.off){ const r0 = contentRect(W, H, vw0, vh0), q = Math.min(r0.w, r0.h), x = r0.x + (r0.w - q)/2, y = r0.y + (r0.h - q)/2, L = Math.min(26, q*.09), i = 10;
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath();
+      for (const [cx, cy, dx, dy] of [[x+i, y+i, 1, 1], [x+q-i, y+i, -1, 1], [x+i, y+q-i, 1, -1], [x+q-i, y+q-i, -1, -1]]){ ctx.moveTo(cx, cy + dy*L); ctx.lineTo(cx, cy); ctx.lineTo(cx + dx*L, cy); }
+      ctx.stroke(); ctx.restore(); } }
   const remote = S.role === 'controller' && Link.linked, vid = remote ? remoteEl : camEl;
   const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw || st.cam?.off) return;
   const r = contentRect(W, H, vw, vh), mirror = remote ? !!st.cam?.mirror : Cam.mirror, tone = toneOf(st);
