@@ -1437,7 +1437,13 @@ function drawT(ctx, cv, W, H){
   const vw = camEl.videoWidth, vh = camEl.videoHeight, z = Cam.swz || 1, cw = vw / z, ch = vh / z;
   ctx.setTransform(sx, 0, 0, sy, sx < 0 ? W : 0, sy < 0 ? H : 0); ctx.drawImage(camEl, (vw - cw)/2, (vh - ch)/2, cw, ch, 0, 0, W, H); ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
-function grab(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null; drawT(pctx, proc, 384, Math.round(384*vh/vw)); return proc; }
+/* The SHORT side of the picture is always 384 px, in portrait and landscape alike.
+   (Before, landscape frames were only 216 px tall, so the AI saw signs blurry and small.) */
+function grab(){
+  const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null;
+  const k = 384 / Math.min(vw, vh), W = Math.round(vw*k), H = Math.round(vh*k);
+  drawT(pctx, proc, W, H); return proc;
+}
 function grabOCR(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null; drawT(octx, ocrCv, 960, Math.round(960*vh/vw)); return ocrCv; }
 function thumb(src){ const c = document.createElement('canvas'); c.width = c.height = 72; const s = Math.min(src.width, src.height); c.getContext('2d').drawImage(src, (src.width-s)/2, (src.height-s)/2, s, s, 0, 0, 72, 72); return c.toDataURL('image/jpeg', .6); }
 
