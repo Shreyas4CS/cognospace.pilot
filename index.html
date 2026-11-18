@@ -259,6 +259,16 @@ footer{border-top:1px solid var(--line);background:#ffffffcc;margin-top:30px}
 .tst-row.ok .st{background:var(--ok);border-color:var(--ok);color:#fff}
 .tst-row.now{box-shadow:0 0 0 2px var(--hl,#2f7bff) inset}
 .tst-row .warn{color:#b45309}
+.dist{border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px}
+.dist-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;margin-bottom:8px;gap:8px}
+.dist-h b{color:#b45309;font-size:13px;letter-spacing:0;text-align:right}.dist-h b.ok{color:var(--ok)}
+.dist-t{position:relative;height:10px;border-radius:9px;background:var(--soft2)}
+.dist-t i{display:block;height:100%;border-radius:9px;transition:width .2s}
+.dist-t em{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--ink)}
+.dist-f{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:6px;gap:6px}
+.dist-f span:nth-child(2){color:var(--ink2);font-weight:600;text-align:center}
+.tst-row .nm small{display:block}
+.near-btn{height:32px!important;padding:0 11px!important;font-size:12.5px!important;flex:none;border-radius:10px}
 .tst-acts{display:flex;gap:8px;margin-top:10px}
 .tst-acts .btn{flex:1;height:40px;font-size:13.5px}
 .ptest-now{display:flex;align-items:center;gap:10px;margin-top:10px;font-family:var(--fd);font-weight:700;font-size:17px}
@@ -417,7 +427,7 @@ select.txt{appearance:auto}
 .gears span.on.stop{color:var(--bad)}
 .gears span.on.stop:after{background:var(--bad);box-shadow:0 0 10px rgba(255,77,103,.6)}
 
-.tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:92px;padding:12px 8px;border-radius:20px;background:var(--card);backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:var(--sh);cursor:pointer;text-align:center;transition:.18s;user-select:none}
 .tile input{position:absolute;opacity:0;pointer-events:none}
 .tile .ti{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--soft2);color:var(--ink2);transition:.18s}
@@ -925,9 +935,7 @@ select.txt{appearance:auto}
 
     <!-- ===== LIVE: feature tiles ===== -->
     <div class="tiles" id="liveTiles">
-      <label class="tile" id="tileDet"><input type="checkbox" id="tDet"><span class="ti"><svg><use href="#i-eye"/></svg></span><span><b>Object detector</b><small>People · cars · lights</small></span></label>
       <label class="tile" id="tileOcr"><input type="checkbox" id="tOcr"><span class="ti"><svg><use href="#i-text"/></svg></span><span><b>Read sign text</b><small>Matches saved words</small></span></label>
-      <label class="tile" id="tileGuard"><input type="checkbox" id="tGuard"><span class="ti"><svg><use href="#i-shield"/></svg></span><span><b>Obstacle guard</b><small>Stops if blocked</small></span></label>
       <button class="tile" id="manTile" type="button"><span class="ti"><svg><use href="#i-joy"/></svg></span><span><b>Manual drive</b><small>Joystick control</small></span></button>
     </div>
 
@@ -957,7 +965,7 @@ select.txt{appearance:auto}
 
       <div class="card" id="testCard" hidden>
         <div class="tst-h"><h3><svg width="17" height="17"><use href="#i-eye"/></svg> Test trained objects</h3><button class="btn primary" id="testBtn">Start test</button></div>
-        <p class="sub" id="testSub" style="margin-top:6px">Check the training before you drive. Hold each sign in front of the camera. It gets a tick once the phone recognises it steadily.</p>
+        <p class="sub" id="testSub" style="margin-top:6px">Check the training before you drive. Show each sign to the camera: the tracker draws a box around it and shows how close it is. Then press “Act from here” at the distance where the car should react.</p>
         <div id="testBody" hidden>
           <div class="tst-now"><span class="sw" id="tnSw" style="background:#cbd5e1"></span><b id="tnName">Looking…</b><span id="tnP"></span></div>
           <div id="testBars"></div>
@@ -994,12 +1002,8 @@ select.txt{appearance:auto}
             </div>
           </div>
           <div id="tabRules" hidden>
-            <p class="sub">Tell Cogno Pilot what to do when it sees each object.</p>
+            <p class="sub">Cogno Pilot only looks for your trained objects. Anything else is ignored.</p>
             <div id="ruleList"></div>
-            <div class="fld" style="margin-top:14px;margin-bottom:0">
-              <span>Add a rule for a built-in object</span>
-              <div style="display:flex;gap:8px"><select class="txt" id="builtinSel"></select><button class="btn soft" id="addBuiltin" style="height:40px">Add</button></div>
-            </div>
           </div>
         </div>
 
@@ -1108,7 +1112,7 @@ select.txt{appearance:auto}
      Vehicle (phone on car): camera + MediaPipe + rules engine + BLE to ESP32
      Control Station (laptop): training, rules, live view, remote control
    ===================================================================== */
-import {FilesetResolver, ImageEmbedder, ObjectDetector} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+import {FilesetResolver, ImageEmbedder} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 
 /* ---------- PUT YOUR COGNOSPACE LOGO HERE ----------
    A URL ("logo.png" next to this file) or a data:image/... string. Empty = text wordmark. */
@@ -1181,7 +1185,7 @@ const camEl = $('#cam'), remoteEl = $('#remote'), overlay = $('#overlay'), stage
    ===================================================================== */
 function defaultRule(name){
   const n = name.toLowerCase();
-  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:60, lcd:(lcd || name).toUpperCase().slice(0, 20)});
+  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:60, near:0, lcd:(lcd || name).toUpperCase().slice(0, 20)});
   if (/school|child|kid/.test(n)) return R('limit', 40, 6, 'SCHOOL ZONE - SLOW');
   if (/zebra|crossing|pedestrian|walk/.test(n)) return R('stopgo', 3, 0, 'ZEBRA CROSSING');
   if (/person/.test(n)) return R('stop', 0, 1, 'PERSON AHEAD');
@@ -1197,8 +1201,10 @@ function defaultRule(name){
 }
 function describeRule(r){
   if (!r) return 'No rule';
-  return r.action === 'limit' ? `Limit to ${r.value}%` : r.action === 'stopgo' ? `Stop ${r.value}s, then go` : r.action === 'stop' ? 'Stop while visible' : 'Ignore';
+  const d = r.action === 'limit' ? `Limit to ${r.value}%` : r.action === 'stopgo' ? `Stop ${r.value}s, then go` : r.action === 'stop' ? 'Stop while visible' : 'Ignore';
+  return r.action !== 'ignore' && r.near ? `${d} · when close` : d;
 }
+function describeIdle(){ const i = Model.idle || {action:'cruise'}; return i.action === 'stop' ? 'Stop and wait' : i.action === 'go' ? `Drive at ${i.value}%` : `Drive at cruise speed`; }
 function b64enc(u8){ let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 function b64dec(b){ const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
 function packVecs(vecs){
@@ -1218,7 +1224,7 @@ function unpackVecs(p){
   return res;
 }
 const Model = {
-  classes: [], builtin: {}, ema: new Map(), updatedAt: 0, sq: true,
+  classes: [], builtin: {}, ema: new Map(), updatedAt: 0, sq: true, idle: {action:'cruise', value:60},
   byId(id){ return this.classes.find(c => c.id === id); },
   total(){ return this.classes.reduce((a, c) => a + c.vecs.length, 0); },
   learned(){ return this.classes.filter(c => !c.bg && c.vecs.length).length; },
@@ -1228,21 +1234,22 @@ const Model = {
   },
   remove(id){ this.classes = this.classes.filter(c => c.id !== id); this.changed(); },
   toJSON(maxThumbs=8){
-    return {v:1, sq:this.sq ? 1 : 0, at:this.updatedAt || Date.now(), builtin:this.builtin,
+    return {v:1, sq:this.sq ? 1 : 0, at:this.updatedAt || Date.now(), builtin:this.builtin, idle:this.idle,
       classes:this.classes.map(c => ({id:c.id, name:c.name, bg:c.bg, color:c.color, keywords:c.keywords, rule:c.rule, thumbs:c.thumbs.slice(0, maxThumbs), vecs:packVecs(c.vecs)}))};
   },
   load(j){
     if (!j || !Array.isArray(j.classes)) return false;
     this.classes = j.classes.map(c => ({...c, keywords:c.keywords || '', thumbs:c.thumbs || [], vecs:unpackVecs(c.vecs)}));
     this.builtin = j.builtin || {}; this.updatedAt = j.at || Date.now(); this.ema.clear(); this.sq = !!j.sq || !this.classes.some(c => c.vecs?.length);
-    const fix = r => { if (r && (r.minConf == null || r.minConf === 70)) r.minConf = 60; };   // old default was 70: too strict for live driving
+    const fix = r => { if (!r) return; if (r.minConf == null || r.minConf === 70) r.minConf = 60; if (r.near == null) r.near = 0; };   // old default 70 was too strict; near = act-distance (0 = any)
+    this.idle = j.idle && j.idle.action ? {...j.idle} : {action:'cruise', value:60};
     this.classes.forEach(c => fix(c.rule)); Object.values(this.builtin).forEach(fix);
     if (!this.classes.some(c => c.bg)) this.classes.unshift({id:uid(), name:'Clear road', bg:true, color:'#94a3b8', keywords:'', rule:null, vecs:[], thumbs:[]});
     return true;
   },
   save(){ LS.set('dataset', this.toJSON(8)); },
   changed(){ if (!this.total()) this.sq = true; this.updatedAt = Date.now(); this.save(); renderSend(); },
-  reset(){ this.classes = []; this.builtin = {}; this.sq = true; this.add('Clear road', true); },
+  reset(){ this.classes = []; this.builtin = {}; this.idle = {action:'cruise', value:60}; this.sq = true; this.add('Clear road', true); },
   predict(v){
     const K = 7, top = [];
     this.classes.forEach((c, ci) => { for (const s of c.vecs){
@@ -1263,16 +1270,6 @@ const Model = {
   classify(v){
     const r = this.predict(v); if (!r) return null;
     const t = r.top; return {c:t.c, p:t.p, sim:t.sim, sure:this.sure(t)};
-  },
-  /* Look at a camera frame: the whole centre square first, then a closer look at the middle
-     (a sign seen from the car is smaller/farther than when it was trained). Used by Test AND Live. */
-  look(f){
-    const a = this.predict(AI.embed(f)); if (!a) return null;
-    a.sure = this.sure(a.top); if (a.sure && !a.top.c.bg) return a;
-    const b = this.predict(AI.embed(f, .6));
-    if (b){ b.sure = this.sure(b.top); if (b.sure && !b.top.c.bg) return b; }
-    if (b){ const ga = a.list.find(x => !x.c.bg), gb = b.list.find(x => !x.c.bg); if (gb && (!ga || gb.p > ga.p)) a.guess = gb; }
-    return a;
   }
 };
 
@@ -1292,8 +1289,6 @@ const AI = {
           catch { return await Task.createFromOptions(vision, {...opts, baseOptions:{...opts.baseOptions, delegate:'CPU'}}); }
         };
         this.embedder = await make(ImageEmbedder, {baseOptions:{modelAssetPath:EMB_MODEL}, runningMode:'IMAGE', l2Normalize:true, quantize:false});
-        setAI('wait', 'Loading detector…');
-        this.detector = await make(ObjectDetector, {baseOptions:{modelAssetPath:DET_MODEL}, runningMode:'IMAGE', scoreThreshold:0.45, maxResults:8});
         this.ready = true; setAI('on', 'AI ready');
       } catch (e) {
         console.error(e); setAI('bad', 'AI failed to load'); toast('Could not load the AI models. Check the internet connection.', 'bad'); this.loading = null;
@@ -1308,6 +1303,11 @@ const AI = {
     if (!this.sq){ this.sq = document.createElement('canvas'); this.sq.width = this.sq.height = 256; this.sqx = this.sq.getContext('2d', {willReadFrequently:true}); }
     const s = Math.min(src.width, src.height) * zoom;
     this.sqx.drawImage(src, (src.width - s)/2, (src.height - s)/2, s, s, 0, 0, 256, 256);
+    const r = this.embedder.embed(this.sq); return Float32Array.from(r.embeddings[0].floatEmbedding);
+  },
+  embedBox(src, b){                       // b = {x, y, s}: a square region of src, in src pixels
+    if (!this.sq) return this.embed(src);
+    this.sqx.drawImage(src, b.x, b.y, b.s, b.s, 0, 0, 256, 256);
     const r = this.embedder.embed(this.sq); return Float32Array.from(r.embeddings[0].floatEmbedding);
   },
   detect(src){
@@ -1568,7 +1568,7 @@ const Engine = {
   running:false, ap:false, estop:false, speed:0, manual:null, effects:new Map(), cool:new Map(), streak:new Map(),
   dets:[], custom:null, fps:0, ti:null,
   start(){
-    if (this.running) return; this.running = true; this.ap = false; this.estop = false; this.speed = 0; this.effects.clear(); this.streak.clear();
+    if (this.running) return; this.running = true; Tracker.reset(); this.ap = false; this.estop = false; this.speed = 0; this.effects.clear(); this.streak.clear();
     AI.init().then(() => this.loop()); this.ti = setInterval(() => this.tick(), 100); OCR.sync();
     logEvent('system', 'Live mode started');
   },
@@ -1583,49 +1583,30 @@ const Engine = {
     while (this.running){
       const t0 = performance.now(), f = AI.ready ? grab() : null;
       if (f){
-        /* each step is guarded on its own: a detector hiccup must never stop the sign rules */
-        try { const r = Model.look(f);                                     // custom signs: every frame (fast reaction)
-              this.custom = r ? {c:r.top.c, p:r.top.p, sim:r.top.sim, sure:r.sure, guess:r.guess || r.list.find(x => !x.c.bg)} : null; }
-        catch (e) { console.warn('embed', e); }
-        if (S.settings.detector){ if (n % 3 === 0){ try { this.dets = AI.detect(f); } catch (e) { console.warn('detect', e); this.dets = []; } } }   // COCO detector: every 3rd frame
-        else this.dets = [];
+        /* only the trained objects: find + follow them with the tracker */
+        try { this.custom = Tracker.step(f); } catch (e) { console.warn('track', e); }
+        this.dets = [];
         try { this.perceive(); } catch (e) { console.warn('perceive', e); }
         n++;
         if (performance.now() - t > 1000){ this.fps = Math.round(n * 1000 / (performance.now() - t)); n = 0; t = performance.now(); }
-      } else if (!Cam.stream){ this.dets = []; this.custom = null; this.fps = 0; this.streak.clear(); n = 0; t = performance.now(); }
+      } else if (!Cam.stream){ this.dets = []; this.custom = null; Tracker.reset(); this.fps = 0; this.streak.clear(); n = 0; t = performance.now(); }
       await sleep(Math.max(5, 50 - (performance.now() - t0)));
     }
   },
   perceive(){
     const now = Date.now(), seen = [];
-    const cu = this.custom;
-    if (cu && cu.c && !cu.c.bg && cu.c.rule && cu.sure) seen.push({key:'c:'+cu.c.id, label:cu.c.name, rule:cu.c.rule, conf:cu.p});
+    const cu = this.custom;                // tracked trained object: act only once it is close enough
+    if (cu && cu.ok && cu.close && cu.c.rule) seen.push({key:'c:'+cu.c.id, label:cu.c.name, rule:cu.c.rule, conf:cu.p, tracked:true});
     for (const c of Model.classes){
       const h = OCR.hits.get(c.id);
       if (h && now - h < 2500 && !c.bg && c.rule && !seen.some(s => s.key === 'c:'+c.id)) seen.push({key:'c:'+c.id, label:c.name, rule:c.rule, conf:.9, text:true});
     }
-    for (const d of this.dets){
-      const r = Model.builtin[d.label];
-      if (r && d.score*100 >= r.minConf && !seen.some(s => s.key === 'b:'+d.label)) seen.push({key:'b:'+d.label, label:d.label, rule:r, conf:d.score});
-    }
     const keys = new Set(seen.map(s => s.key));
     for (const [k, n] of [...this.streak]) if (!keys.has(k)){ if (n <= 1) this.streak.delete(k); else this.streak.set(k, Math.min(n, 3) - 1); }
     let fresh = false;
-    for (const s of seen){ const n = Math.min(6, (this.streak.get(s.key) || 0) + 1); this.streak.set(s.key, n); if (n >= 2 || s.text) fresh = this.trigger(s) || fresh; }
+    for (const s of seen){ const n = Math.min(6, (this.streak.get(s.key) || 0) + 1); this.streak.set(s.key, n); if (n >= 2 || s.text || s.tracked) fresh = this.trigger(s) || fresh; }
     if (fresh) this.tick();                // act now, don't wait for the next 100 ms tick
 
-    if (S.settings.guard){
-      for (const d of this.dets){
-        if (!GUARD.includes(d.label) || d.score < .5) continue;
-        const cx = d.box.x + d.box.w/2;
-        if (cx > .2 && cx < .8 && d.box.w*d.box.h*100 >= S.settings.guardArea){
-          const had = this.effects.has('guard');
-          this.effects.set('guard', {label:'Obstacle: ' + d.label, cap:0, until:now + 700, kind:'stop', lcd:'OBSTACLE AHEAD'});
-          if (!had) logEvent('stop', `Obstacle ahead (${d.label}). Stopping`, {label:'Obstacle'});
-          break;
-        }
-      }
-    }
   },
   trigger(s){
     const now = Date.now(), r = s.rule, had = this.effects.has(s.key);
@@ -1653,7 +1634,8 @@ const Engine = {
       L = clamp(man.y + man.x*.8, -100, 100) * p; R = clamp(man.y - man.x*.8, -100, 100) * p;
       this.speed = Math.round(Math.abs(man.y) * p);
     } else {
-      const target = this.ap ? Math.min(S.settings.cruise, cap) : 0;
+      const idle = Model.idle || {action:'cruise'}, clear = idle.action === 'stop' ? 0 : idle.action === 'go' ? idle.value : S.settings.cruise;
+      const target = !this.ap ? 0 : act ? Math.min(S.settings.cruise, cap) : clear;   // nothing trained in view → the "road clear" rule
       if (target < this.speed) this.speed = target === 0 ? 0 : Math.max(target, this.speed - 25);
       else this.speed = Math.min(target, this.speed + 6);
       const t = S.settings.trim / 100;
@@ -1680,13 +1662,15 @@ const Engine = {
   snapshot(){
     const act = this.active(), now = Date.now();
     const man = this.manual && this.manual.until > now;
-    const cu = this.custom && this.custom.c && !this.custom.c.bg && this.custom.sure ? this.custom : null;
+    const cu = this.custom && this.custom.ok ? this.custom : null, g = Tracker.guess;
     return {
       mode: this.estop ? 'E-STOP' : man ? 'MANUAL' : this.ap ? 'AUTO' : 'PAUSED', ap:this.ap, estop:this.estop,
       speed:Math.round(this.speed), cap: act ? act.cap : 100, active: act ? {label:act.label, kind:act.kind, lcd:act.lcd} : null,
       dets: this.dets.slice(0, 8).map(d => ({label:d.label, score:+d.score.toFixed(2), box:{x:+d.box.x.toFixed(3), y:+d.box.y.toFixed(3), w:+d.box.w.toFixed(3), h:+d.box.h.toFixed(3)}})),
-      custom: cu ? {name:cu.c.name, color:cu.c.color, p:Math.round(cu.p*100), rule:describeRule(cu.c.rule)} : null,
-      guess: !cu && this.custom?.guess && this.custom.guess.p >= .25 ? {name:this.custom.guess.c.name, color:this.custom.guess.c.color, p:Math.round(this.custom.guess.p*100), need:Math.round(Model.need(this.custom.guess.c)*100)} : null,
+      custom: cu ? {name:cu.c.name, color:cu.c.color, p:Math.round(cu.p*100), rule:describeRule(cu.c.rule), size:cu.size, near:cu.near, close:cu.close,
+                    box:{x:+cu.box.x.toFixed(3), y:+cu.box.y.toFixed(3), w:+cu.box.w.toFixed(3), h:+cu.box.h.toFixed(3)}} : null,
+      guess: !cu && g && g.p >= .25 ? {name:g.c.name, color:g.c.color, p:Math.round(g.p*100), need:Math.round(Model.need(g.c)*100)} : null,
+      clear: describeIdle(),
       ocr: OCR.text.slice(0, 60), ble:BLE.connected, fps:this.fps, cam:Cam.info(), learned:Model.learned()
     };
   }
@@ -1838,6 +1822,7 @@ const Link = {
         remoteEl.style.transform = Cam.css(d.cam || {}); break;
       case 'ev': if (this.linked === e) logEvent(d.e.kind, d.e.text, {label:d.e.label, remote:true, t:d.e.t}); break;
       case 'test': if (this.linked === e){ S.ptest = d; renderPhoneTest(); } break;
+      case 'near': if (this.linked === e){ const c = Model.byId(d.id); if (c?.rule){ c.rule.near = d.v; Model.changed(); S.synced = Date.now(); renderRules(); toast(`${S.linkedName} set “${c.name}” to act at size ≥ ${d.v}%`, 'ok'); } } break;
       case 'dsok': S.synced = Date.now(); S.lastSent = Date.now(); toast(`Vehicle learned ${d.learned} objects`, 'ok'); renderSend(); break;
       case 'dserr': toast('Transfer failed. Please send again.', 'bad'); renderSend(); break;
       case 'ended': break;
@@ -2188,6 +2173,78 @@ Pack.downloadImages = async function(){
 /* =====================================================================
    SESSION LOG
    ===================================================================== */
+
+/* =====================================================================
+   TRACKER  ·  finds and follows ONLY the trained objects
+   MediaPipe has no ready-made tracker for your own signs, so Cogno Pilot builds one:
+   it scans the picture with small square windows, asks the MediaPipe embedder what each
+   window looks like, and keeps following the best match from frame to frame.
+   The box size tells how close the object is.
+   ===================================================================== */
+const Tracker = {
+  track:null, scanI:0, gridKey:'', G:[], guess:null,
+  reset(){ this.track = null; this.guess = null; },
+  grid(W, H){
+    const key = W + 'x' + H; if (key === this.gridKey) return this.G;
+    const m = Math.min(W, H), out = [];
+    for (const k of [1, .72, .5]){
+      const sz = m*k, nx = Math.max(1, Math.round((W - sz)/(sz*.5)) + 1), ny = Math.max(1, Math.round((H - sz)/(sz*.5)) + 1);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) out.push({x: nx > 1 ? i*(W - sz)/(nx - 1) : (W - sz)/2, y: ny > 1 ? j*(H - sz)/(ny - 1) : (H - sz)/2, s:sz});
+    }
+    { const sz = m*.36;                                        // small windows (farther objects) only in the middle of the view
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) out.push({x:W/2 - sz/2 + (i - 1)*sz*.6, y:H/2 - sz/2 + (j - 1)*sz*.6, s:sz}); }
+    // centre first, then outwards: the road ahead matters most
+    out.sort((a, b) => Math.hypot(a.x + a.s/2 - W/2, a.y + a.s/2 - H/2)/a.s - Math.hypot(b.x + b.s/2 - W/2, b.y + b.s/2 - H/2)/b.s);
+    this.gridKey = key; this.G = out; return out;
+  },
+  fit(b, W, H){ const m = Math.min(W, H), sz = clamp(b.s, m*.22, m); return {x:clamp(b.x, 0, W - sz), y:clamp(b.y, 0, H - sz), s:sz}; },
+  step(f){
+    const W = f.width, H = f.height, m = Math.min(W, H), cands = [], t = this.track;
+    if (t){
+      const b = t.box, cx = b.x + b.s/2, cy = b.y + b.s/2;
+      for (const [dx, dy, ds] of [[0, 0, 1], [-.18, 0, 1], [.18, 0, 1], [0, -.18, 1], [0, .18, 1], [0, 0, .82], [0, 0, 1.22]]){
+        const sz = b.s*ds; cands.push(this.fit({x:cx + dx*b.s - sz/2, y:cy + dy*b.s - sz/2, s:sz}, W, H));
+      }
+    }
+    const G = this.grid(W, H), nScan = t ? 2 : 8;
+    for (let k = 0; k < nScan; k++) cands.push(G[(this.scanI++) % G.length]);
+    let best = null, guess = null; const hits = [];
+    for (const b of cands){
+      const r = Model.predict(AI.embedBox(f, b)); if (!r) return null;
+      const top = r.top;
+      if (!top.c.bg && Model.sure(top)) hits.push({c:top.c, p:top.p, sim:top.sim, sc:top.p*top.sim, box:b});
+      const g = r.list.find(x => !x.c.bg); if (g && (!guess || g.p > guess.p)) guess = {c:g.c, p:g.p};
+    }
+    this.guess = guess;
+    if (hits.length){
+      const top = hits.reduce((a, h) => h.sc > a.sc ? h : a);
+      // the tightest window that still matches almost as well = a box that hugs the object (good for distance)
+      best = hits.filter(h => h.c === top.c && h.sc >= top.sc*.9).reduce((a, h) => h.box.s < a.box.s ? h : a);
+    }
+    if (best){
+      if (t && best.c === t.c){
+        const k = .55; t.box = {x:t.box.x + (best.box.x - t.box.x)*k, y:t.box.y + (best.box.y - t.box.y)*k, s:t.box.s + (best.box.s - t.box.s)*k};
+        t.p = t.p*.4 + best.p*.6; t.sim = best.sim; t.hits++; t.miss = 0;
+      } else if (!t || t.miss > 0 || best.sc > t.p*t.sim*1.25){
+        this.track = {c:best.c, p:best.p, sim:best.sim, box:best.box, hits:1, miss:0};
+      } else t.miss++;
+    } else if (t){ t.miss++; if (t.miss >= 4) this.track = null; }
+    const tr = this.track;
+    if (tr){ const sz = tr.box.s / m; tr.size = tr.size == null ? sz : tr.size*.6 + sz*.4; }
+    return this.state(W, H);
+  },
+  confirmed(){ const t = this.track; return !!t && t.hits >= 2 && t.miss <= 1; },
+  state(W, H){
+    const t = this.track; if (!t) return null;
+    const near = (t.c.rule?.near || 0), size = Math.round(t.size*100);
+    t.close = near <= 0 ? true : t.close ? size >= near - 4 : size >= near;     // small hysteresis: no flicker at the edge
+    // show the box a bit tighter than the window (the sign sits in the middle of the matching window)
+    const k = .78, s2 = t.box.s*k, bx = t.box.x + (t.box.s - s2)/2, by = t.box.y + (t.box.s - s2)/2;
+    return {c:t.c, p:t.p, size, near, close:t.close, ok:this.confirmed(),
+            box:{x:bx/W, y:by/H, w:s2/W, h:s2/H}};
+  }
+};
+
 /* ---------- phone: test trained objects ---------- */
 const Test = {
   on:false, res:{}, streak:{id:null, n:0}, cur:null, lastSend:0,
@@ -2198,31 +2255,37 @@ const Test = {
     if (!Model.learned()){ toast(Link.linked ? 'No trained objects yet. Send training from the Control Station first.' : 'No trained objects yet. Train some objects first.', 'warn'); return; }
     if (!Cam.stream){ await Cam.power(true); if (!Cam.stream) return; }
     if (!AI.ready) toast('AI is still loading. The test starts as soon as it is ready.');
-    this.on = true; this.cur = null; this.streak = {id:null, n:0};
+    this.on = true; this.cur = null; this.streak = {id:null, n:0}; Tracker.reset();
     logEvent('system', 'Training test started'); this.render(); this.report(true);
   },
   stop(){ if (!this.on) return; this.on = false; this.cur = null; this.render(); this.report(true); },
   reset(){ this.res = {}; this.streak = {id:null, n:0}; this.render(); this.report(true); },
-  step(r){
-    if (!r) this.cur = null;
-    else {
-      const t = r.top, sure = Model.sure(t);
-      this.cur = {c:t.c, p:t.p, sure, list:r.list};
-      if (sure){
-        this.streak = this.streak.id === t.c.id ? {id:t.c.id, n:this.streak.n + 1} : {id:t.c.id, n:1};
-        const o = this.res[t.c.id] || (this.res[t.c.id] = {best:0, ok:false});
-        o.best = Math.max(o.best, t.p);
-        if (this.streak.n >= 3 && !o.ok){ o.ok = true; if (!t.c.bg) Lcd.msg(['TEST: RECOGNISED', t.c.name.toUpperCase().slice(0, 20), Math.round(t.p*100) + '% SURE', '']); }
-      } else this.streak = {id:null, n:0};
-    }
+  step(st){
+    this.cur = st && st.ok ? st : null;
+    const t = this.cur;
+    if (t){
+      this.streak = this.streak.id === t.c.id ? {id:t.c.id, n:this.streak.n + 1} : {id:t.c.id, n:1};
+      const o = this.res[t.c.id] || (this.res[t.c.id] = {best:0, ok:false});
+      o.best = Math.max(o.best, t.p); o.size = t.size;
+      if (this.streak.n >= 3 && !o.ok){ o.ok = true; Lcd.msg(['TEST: RECOGNISED', t.c.name.toUpperCase().slice(0, 20), Math.round(t.p*100) + '% SURE', '']); }
+    } else this.streak = {id:null, n:0};
     this.renderLive(); this.report();
   },
-  label(){ const c = this.cur; return !c ? (Cam.stream ? 'Looking…' : 'Camera is off') : !c.sure ? 'Not sure' : c.c.bg ? 'Clear road' : c.c.name; },
+  label(){ const c = this.cur, g = Tracker.guess; return c ? c.c.name : !Cam.stream ? 'Camera is off' : g && g.p >= .25 ? `${g.c.name}?` : 'No trained object'; },
   report(force=false){
     if (S.role !== 'vehicle' || !Link.linked) return;
     const now = Date.now(); if (!force && now - this.lastSend < 400) return; this.lastSend = now;
     const c = this.cur, sc = this.score();
-    Link.send({t:'test', on:this.on, name:this.label(), color:c?.sure ? c.c.color : '#cbd5e1', p:c ? Math.round(c.p*100) : 0, sure:!!c?.sure, ok:sc.ok, total:sc.total});
+    Link.send({t:'test', on:this.on, name:this.label(), color:c ? c.c.color : '#cbd5e1', p:c ? Math.round(c.p*100) : 0, sure:!!c, size:c ? c.size : 0, near:c ? c.near : 0, ok:sc.ok, total:sc.total});
+  },
+  /* "Act from here": the current distance becomes the trigger distance for this object */
+  setNear(id){
+    const c = Model.byId(id), t = this.cur; if (!c || !c.rule || !t || t.c !== c) return;
+    c.rule.near = clamp(Math.round(t.size/5)*5 - 5, 0, 90);         // a little margin so it fires reliably at this spot
+    Model.save(); this.renderLive();
+    if (S.role === 'vehicle' && Link.linked) Link.send({t:'near', id, v:c.rule.near});
+    toast(`${c.name}: acts from this distance now (size ≥ ${c.rule.near}%)`, 'ok');
+    logEvent('system', `${c.name} set to act at size ≥ ${c.rule.near}%`);
   },
   render(){
     const card = $('#testCard'); if (!card) return;
@@ -2235,19 +2298,24 @@ const Test = {
   },
   renderLive(){
     if (!this.on) return;
-    const c = this.cur, name = this.label(), col = c?.sure ? c.c.color : '#cbd5e1', pct = c?.sure ? Math.round(c.p*100) + '%' : '';
+    const c = this.cur, name = this.label(), col = c ? c.c.color : '#cbd5e1', pct = c ? Math.round(c.p*100) + '%' : '';
     $('#tnName').textContent = name; $('#tnSw').style.background = col; $('#tnP').textContent = pct; $('#tnP').style.color = col;
-    $('#tbName').textContent = name; $('#tbName').style.color = c?.sure ? col : 'var(--muted)'; $('#tbP').textContent = pct;
-    $('#testBars').innerHTML = c ? c.list.slice(0, 3).map(x => `<div class="pbar"><span>${esc(x.c.name)}</span><span class="t"><i style="width:${Math.round(x.p*100)}%;background:${x.c.color}"></i></span><span>${Math.round(x.p*100)}%</span></div>`).join('') : '';
+    $('#tbName').textContent = name; $('#tbName').style.color = c ? col : 'var(--muted)'; $('#tbP').textContent = c ? `${pct} · ${c.close ? 'close' : 'far'}` : '';
+    /* distance meter: how big the object is in view, and where its rule starts acting */
+    $('#testBars').innerHTML = c ? `<div class="dist">
+        <div class="dist-h"><span>Distance</span><b class="${c.close ? 'ok' : ''}">${c.close ? (c.near ? 'Close enough · will act' : 'Acts at any distance') : `Too far · acts when closer`}</b></div>
+        <div class="dist-t"><i style="width:${c.size}%;background:${col}"></i>${c.near ? `<em style="left:${c.near}%"></em>` : ''}</div>
+        <div class="dist-f"><span>Far</span><span>Size in view ${c.size}%${c.near ? ` · acts at ${c.near}%` : ''}</span><span>Near</span></div>
+      </div>` : `<div class="empty" style="padding:6px 2px">${Tracker.guess && Tracker.guess.p >= .25 ? `Maybe “${esc(Tracker.guess.c.name)}” (${Math.round(Tracker.guess.p*100)}%, needs ${Math.round(Model.need(Tracker.guess.c)*100)}%). Move closer or hold it steady.` : 'Show a trained sign to the camera. Anything else is ignored.'}</div>`;
     const sc = this.score(); $('#testScore').textContent = `${sc.ok} / ${sc.total} recognised`;
-    $('#testList').innerHTML = this.objs().map(o => {
-      const r = this.res[o.id], few = o.vecs.length < 15, now = c?.sure && c.c === o;
-      const note = r?.ok ? `Recognised · best ${Math.round(r.best*100)}%`
-        : r ? `Seen briefly · best ${Math.round(r.best*100)}%. Hold it steady`
-        : o.bg ? 'Point at the empty floor' : 'Not seen yet';
+    $('#testList').innerHTML = this.objs().filter(o => !o.bg).map(o => {
+      const r = this.res[o.id], few = o.vecs.length < 15, now = c && c.c === o, near = o.rule?.near || 0;
+      const note = r?.ok ? `Recognised · best ${Math.round(r.best*100)}%` : r ? `Seen briefly · best ${Math.round(r.best*100)}%. Hold it steady` : 'Not seen yet';
+      const dist = o.rule?.action === 'ignore' ? 'Rule: ignore' : near ? `Acts at size ≥ ${near}%` : 'Acts at any distance';
       return `<div class="tst-row${r?.ok ? ' ok' : ''}${now ? ' now' : ''}" style="--hl:${o.color}">
         <span class="sw" style="background:${o.color}"></span>
-        <span class="nm"><b>${esc(o.name)}</b><small>${note}${few && !r?.ok ? ` · <span class="warn">only ${o.vecs.length} samples</span>` : ''}</small></span>
+        <span class="nm"><b>${esc(o.name)}</b><small>${note}${few && !r?.ok ? ` · <span class="warn">only ${o.vecs.length} samples</span>` : ''}</small><small>${dist}</small></span>
+        ${now && o.rule && o.rule.action !== 'ignore' ? `<button class="btn soft near-btn" data-near="${o.id}">Act from here</button>` : ''}
         <span class="st"><svg><use href="#i-check"/></svg></span></div>`;
     }).join('');
   }
@@ -2257,7 +2325,7 @@ function renderPhoneTest(){
   const d = S.ptest, show = S.role === 'controller' && !!Link.linked && !!d?.on;
   card.hidden = !show; if (!show) return;
   $('#ptSub').textContent = `${S.linkedName} is testing your training. Hold each sign in front of its camera.`;
-  $('#ptName').textContent = d.name + (d.sure ? ` · ${d.p}%` : ''); $('#ptName').style.color = d.sure ? d.color : 'var(--muted)';
+  $('#ptName').textContent = d.name + (d.sure ? ` · ${d.p}% · size ${d.size}%${d.near ? ` (acts at ${d.near}%)` : ''}` : ''); $('#ptName').style.color = d.sure ? d.color : 'var(--muted)';
   $('#ptSw').style.background = d.color; $('#ptScore').textContent = `${d.ok} / ${d.total}`;
 }
 async function testLoop(){
@@ -2266,9 +2334,9 @@ async function testLoop(){
     if (!Test.on) continue;
     if (!Test.available()){ Test.render(); continue; }
     if (!AI.ready) continue;
-    const f = grab(); if (!f){ if (Test.cur){ Test.cur = null; Test.renderLive(); Test.report(); } continue; }
-    let r; try { r = Model.look(f); } catch { continue; }
-    Test.step(r);
+    const f = grab(); if (!f){ if (Test.cur){ Test.cur = null; Tracker.reset(); Test.renderLive(); Test.report(); } continue; }
+    let st; try { st = Tracker.step(f); } catch (e) { console.warn(e); continue; }
+    Test.step(st);
   }
 }
 
@@ -2509,20 +2577,34 @@ function ruleCard(key, name, color, r){
       <label class="fld" ${noVal ? 'hidden' : ''}><span>${isLimit ? 'Max speed' : 'Stop for'} <output>${isLimit ? r.value + '%' : r.value + ' s'}</output></span>
         <input type="range" data-f="value" min="${isLimit ? 10 : 1}" max="${isLimit ? 100 : 10}" step="${isLimit ? 5 : 1}" value="${r.value}"></label>
       <label class="fld" ${isGo ? 'hidden' : ''}><span>Keep the rule after it's gone <output>${r.hold} s</output></span><input type="range" data-f="hold" min="0" max="15" step="1" value="${r.hold}"></label>
+      <label class="fld"><span>Act only when it is this close <output>${r.near ? 'size ≥ ' + r.near + '%' : 'Any distance'}</output></span><input type="range" data-f="near" min="0" max="90" step="5" value="${r.near || 0}"></label>
+      <p class="hint" style="margin:-4px 0 10px;font-size:12px;color:var(--muted)">Bigger = closer. Easiest: run the test on the phone and press “Act from here”.</p>
       <label class="fld"><span>Only act when at least this sure <output>${r.minConf}%</output></span><input type="range" data-f="minConf" min="50" max="95" step="5" value="${r.minConf}"></label>
       <label class="fld" style="margin-bottom:0"><span>LCD message</span><input class="txt" data-f="lcd" maxlength="20" value="${esc(r.lcd)}"></label>
     </div>
   </div>`;
 }
-function ruleFor(key){ return key.startsWith('c:') ? Model.byId(key.slice(2))?.rule : Model.builtin[key.slice(2)]; }
+function ruleFor(key){ return key === 'idle' ? Model.idle : key.startsWith('c:') ? Model.byId(key.slice(2))?.rule : Model.builtin[key.slice(2)]; }
+function idleCard(){
+  const r = Model.idle || {action:'cruise', value:60};
+  return `<div class="rule idle-rule" data-key="idle">
+    <div class="rule-h"><span class="sw" style="background:#12c18c"></span><b>Road clear</b><span class="count" style="margin-left:auto">always</span></div>
+    <p class="q">When none of your trained objects is close, what should the car do?</p>
+    <div class="acts">
+      <button data-act="cruise" class="${r.action === 'cruise' ? 'on' : ''}"><svg><use href="#i-play"/></svg>Cruise speed</button>
+      <button data-act="go" class="${r.action === 'go' ? 'on' : ''}"><svg><use href="#i-gauge"/></svg>Set speed</button>
+      <button data-act="stop" class="${r.action === 'stop' ? 'on' : ''}"><svg><use href="#i-hand"/></svg>Stop &amp; wait</button>
+    </div>
+    <label class="fld" style="margin:12px 0 0" ${r.action === 'go' ? '' : 'hidden'}><span>Drive forward at <output>${r.value}%</output></span><input type="range" data-f="value" min="10" max="100" step="5" value="${r.value}"></label>
+    <p class="hint" style="margin:10px 0 0;font-size:12px;color:var(--muted)">${r.action === 'cruise' ? 'Uses the Cruise slider in Live mode.' : r.action === 'stop' ? 'The car only moves when you drive it manually.' : 'Anything that is not trained is ignored.'}</p>
+  </div>`;
+}
 function renderRules(){
   const el = $('#ruleList'); if (!el) return;
   const cls = Model.classes.filter(c => !c.bg);
-  el.innerHTML = cls.length || Object.keys(Model.builtin).length
-    ? cls.map(c => ruleCard('c:' + c.id, c.name, c.color, c.rule)).join('') + Object.entries(Model.builtin).map(([k, r]) => ruleCard('b:' + k, k, '#64748b', r)).join('')
-    : '<div class="empty">Add an object first, then choose what the car should do when it sees it.</div>';
-  $('#builtinSel').innerHTML = BUILTIN.filter(b => !Model.builtin[b]).map(b => `<option>${b}</option>`).join('');
-  const b = $('#ruleBadge'); b.textContent = cls.length + Object.keys(Model.builtin).length; b.hidden = !+b.textContent;
+  el.innerHTML = idleCard() + (cls.length ? cls.map(c => ruleCard('c:' + c.id, c.name, c.color, c.rule)).join('')
+    : '<div class="empty">Add an object first, then choose what the car should do when it sees it.</div>');
+  const b = $('#ruleBadge'); b.textContent = cls.length; b.hidden = !+b.textContent;
 }
 function showTab(group, tab){
   $$(`#${group} button`).forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
@@ -2549,8 +2631,7 @@ function renderSettings(){
   const s = S.settings;
   $('#cruise').value = s.cruise; $('#cruiseOut').textContent = s.cruise + '%';
   $('#trim').value = s.trim; $('#trimOut').textContent = (s.trim > 0 ? '+' : '') + s.trim;
-  $('#tDet').checked = s.detector; $('#tOcr').checked = s.ocr; $('#tGuard').checked = s.guard;
-  $('#tileDet').classList.toggle('on', !!s.detector); $('#tileOcr').classList.toggle('on', !!s.ocr); $('#tileGuard').classList.toggle('on', !!s.guard);
+  $('#tOcr').checked = s.ocr; $('#tileOcr').classList.toggle('on', !!s.ocr);
 }
 function setSetting(k, v){ const s = {[k]:v}; Object.assign(S.settings, s); LS.set('settings', S.settings); if (S.role === 'controller' && Link.linked) cmd({k:'set', s}); else { OCR.sync(); } renderSettings(); }
 function curState(){ return S.role === 'controller' && Link.linked ? S.remote : Engine.running ? Engine.snapshot() : null; }
@@ -2562,7 +2643,7 @@ function renderLive(st){
   Speedo.set(speed, limited ? cap : null, tone);
   $('#spVal').textContent = speed; $('#spSub').textContent = limited ? `MAX ${cap}%` : 'SPEED %'; $('#hsSpeed').textContent = speed;
   const title = !st ? 'Waiting for vehicle' : mode === 'E-STOP' ? 'Emergency stop' : mode === 'MANUAL' ? 'Manual control' : st.ap ? (st.active ? (st.active.kind === 'stop' ? 'Stopping' : 'Speed limited') : 'Autonomous drive active') : 'Autopilot ready';
-  const sub = !st ? 'Connecting to the car…' : st.active ? `${st.active.label} · ${st.active.kind === 'stop' ? 'stopping' : 'max ' + cap + '%'}` : st.custom ? `${st.custom.name} in view · ${st.custom.rule}` : st.dets?.length ? `${st.dets.length} object${st.dets.length > 1 ? 's' : ''} in view · path monitored` : 'Road clear · all systems monitoring';
+  const sub = !st ? 'Connecting to the car…' : st.active ? `${st.active.label} · ${st.active.kind === 'stop' ? 'stopping' : 'max ' + cap + '%'}` : st.custom ? (st.custom.close ? `${st.custom.name} in view · ${st.custom.rule}` : `${st.custom.name} ahead · acts when closer`) : `Road clear · ${st.clear || 'cruise'}`;
   const ap = $('#apState'); ap.textContent = title; ap.className = tone === 'go' ? '' : tone; $('#hsSub').textContent = sub;
   const ppB = $('#ppB'); ppB.className = 'pp-b ' + (tone === 'go' ? '' : tone);
   ppB.textContent = tone === 'go' ? (mode === 'MANUAL' ? 'Manual control' : 'Safe path detected') : tone === 'limit' ? `Speed limited to ${cap}%` : tone === 'stop' ? (mode === 'E-STOP' ? 'Emergency stop' : 'Stopping safely') : (st ? 'Autopilot paused' : 'Waiting for vehicle');
@@ -2576,7 +2657,7 @@ function renderLive(st){
   $$('#gears span').forEach(sp => { const on = sp.dataset.g === mode; sp.classList.toggle('on', on); sp.classList.toggle('stop', on && mode === 'E-STOP'); });
   const bl = $('#spBle'), car = st?.ble; bl.className = 'sp-corner l ' + (car ? 'good' : 'bad'); bl.lastElementChild.textContent = car ? 'CAR' : 'NO CAR';
   $('#spAi').lastElementChild.textContent = `${st?.fps || 0} FPS`;
-  $('#signChip').innerHTML = st?.custom ? `<div class="sign-chip"><span class="sw" style="background:${st.custom.color}"></span><span>${esc(st.custom.name)} · ${st.custom.p}%<small>${esc(st.custom.rule)}</small></span></div>`
+  $('#signChip').innerHTML = st?.custom ? `<div class="sign-chip${st.custom.close ? '' : ' guess'}"><span class="sw" style="background:${st.custom.color}"></span><span>${esc(st.custom.name)} · ${st.custom.close ? st.custom.p + '%' : 'far'}<small>${st.custom.close ? esc(st.custom.rule) : `Size ${st.custom.size}% · acts at ${st.custom.near}%`}</small></span></div>`
     : st?.guess ? `<div class="sign-chip guess"><span class="sw" style="background:${st.guess.color}"></span><span>${esc(st.guess.name)}? ${st.guess.p}%<small>Needs ${st.guess.need}% to act. Move closer</small></span></div>` : '';
   const oc = $('#ocrChip'); oc.hidden = !st?.ocr; oc.textContent = st?.ocr ? 'Text: ' + st.ocr : '';
   $('#fpsStat').textContent = (st?.fps || 0) + ' fps';
@@ -2586,7 +2667,7 @@ function renderLive(st){
   renderRoadEv(st);
   if (!st){ if (lastDetHTML !== 'none'){ $('#detList').innerHTML = '<div class="empty">Waiting for the vehicle…</div>'; lastDetHTML = 'none'; } return; }
   const rows = [];
-  if (st.custom) rows.push(`<div class="det-row"><span class="sw" style="background:${st.custom.color};width:12px;height:12px"></span><span>${esc(st.custom.name)}<small>${esc(st.custom.rule)}</small></span><span class="t"><i style="width:${st.custom.p}%;background:${st.custom.color}"></i></span><span>${st.custom.p}%</span></div>`);
+  if (st.custom) rows.push(`<div class="det-row"><span class="sw" style="background:${st.custom.color};width:12px;height:12px"></span><span>${esc(st.custom.name)}<small>${st.custom.close ? esc(st.custom.rule) : `Far · size ${st.custom.size}%, acts at ${st.custom.near}%`}</small></span><span class="t"><i style="width:${st.custom.p}%;background:${st.custom.color}"></i></span><span>${st.custom.p}%</span></div>`);
   for (const d of st.dets){ const r = Model.builtin[d.label]; rows.push(`<div class="det-row"><span class="sw" style="background:${detColor(d.label)};width:12px;height:12px"></span><span>${esc(d.label)}<small>${r ? esc(describeRule(r)) : GUARD.includes(d.label) ? 'Obstacle guard' : 'Detected'}</small></span><span class="t"><i style="width:${Math.round(d.score*100)}%;background:${detColor(d.label)}"></i></span><span>${Math.round(d.score*100)}%</span></div>`); }
   const html = rows.join('') || '<div class="empty">Nothing detected. Road clear.</div>';
   if (html !== lastDetHTML){ $('#detList').innerHTML = html; lastDetHTML = html; }
@@ -2656,40 +2737,39 @@ function frame(){
   if (overlay.width !== Math.round(W*dpr) || overlay.height !== Math.round(H*dpr)){ overlay.width = Math.round(W*dpr); overlay.height = Math.round(H*dpr); }
   const ctx = overlay.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
   if (S.mode !== 'live'){
-    /* Train: show the square the AI actually looks at */
-    const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream || camEl.hidden) return;
-    const r = contentRect(W, H, vw, vh), q = Math.min(r.w, r.h), x = r.x + (r.w - q)/2, y = r.y + (r.h - q)/2, L = Math.min(34, q*.12);
-    ctx.save();
-    ctx.fillStyle = 'rgba(15,23,42,.18)';                                   // dim the parts the AI ignores
-    if (r.w > r.h){ ctx.fillRect(r.x, r.y, x - r.x, r.h); ctx.fillRect(x + q, r.y, r.x + r.w - x - q, r.h); }
-    else if (r.h > r.w){ ctx.fillRect(r.x, r.y, r.w, y - r.y); ctx.fillRect(r.x, y + q, r.w, r.y + r.h - y - q); }
-    ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6;
-    const i = 10; ctx.beginPath();
-    for (const [cx, cy, dx, dy] of [[x+i, y+i, 1, 1], [x+q-i, y+i, -1, 1], [x+i, y+q-i, 1, -1], [x+q-i, y+q-i, -1, -1]]){ ctx.moveTo(cx, cy + dy*L); ctx.lineTo(cx, cy); ctx.lineTo(cx + dx*L, cy); }
-    ctx.stroke(); ctx.restore();
+    /* Train: while testing, show the tracking box */
+    const vw = camEl.videoWidth, vh = camEl.videoHeight;
+    if (!Test.on || !vw || !Cam.stream || camEl.hidden){ shownBox = null; return; }
+    const t = Test.cur; if (!t){ shownBox = null; return; }
+    drawTrack(ctx, contentRect(W, H, vw, vh), Cam.mirror, t.box, t.c.name, t.c.color, Math.round(t.p*100), t.size, t.near, t.close);
     return;
   }
-  const st = curState(); if (!st) return;
-  { const vw0 = (S.role === 'controller' && Link.linked ? remoteEl : camEl).videoWidth, vh0 = (S.role === 'controller' && Link.linked ? remoteEl : camEl).videoHeight;
-    if (vw0 && !st.cam?.off){ const r0 = contentRect(W, H, vw0, vh0), q = Math.min(r0.w, r0.h), x = r0.x + (r0.w - q)/2, y = r0.y + (r0.h - q)/2, L = Math.min(26, q*.09), i = 10;
-      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath();
-      for (const [cx, cy, dx, dy] of [[x+i, y+i, 1, 1], [x+q-i, y+i, -1, 1], [x+i, y+q-i, 1, -1], [x+q-i, y+q-i, -1, -1]]){ ctx.moveTo(cx, cy + dy*L); ctx.lineTo(cx, cy); ctx.lineTo(cx + dx*L, cy); }
-      ctx.stroke(); ctx.restore(); } }
+  const st = curState(); if (!st){ shownBox = null; return; }
   const remote = S.role === 'controller' && Link.linked, vid = remote ? remoteEl : camEl;
-  const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw || st.cam?.off) return;
-  const r = contentRect(W, H, vw, vh), mirror = remote ? !!st.cam?.mirror : Cam.mirror, tone = toneOf(st);
-  /* custom object: glowing frame */
-  if (st.custom){ ctx.save(); ctx.strokeStyle = st.custom.color; ctx.shadowColor = st.custom.color; ctx.shadowBlur = 22; ctx.lineWidth = 4; ctx.globalAlpha = .9; rr(ctx, r.x + 4, r.y + 4, r.w - 8, r.h - 8, 20); ctx.stroke(); ctx.restore(); }
-  /* detections: rounded boxes with a name tag (same style as V3 stable) */
+  const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw || st.cam?.off){ shownBox = null; return; }
+  const r = contentRect(W, H, vw, vh), mirror = remote ? !!st.cam?.mirror : Cam.mirror;
+  const cu = st.custom;
+  if (!cu || !cu.box){ shownBox = null; return; }
+  /* acting: soft glow around the whole view in the object's colour */
+  if (cu.close){ ctx.save(); ctx.strokeStyle = cu.color; ctx.shadowColor = cu.color; ctx.shadowBlur = 22; ctx.lineWidth = 4; ctx.globalAlpha = .85; rr(ctx, r.x + 4, r.y + 4, r.w - 8, r.h - 8, 20); ctx.stroke(); ctx.restore(); }
+  drawTrack(ctx, r, mirror, cu.box, cu.name, cu.color, cu.p, cu.size, cu.near, cu.close);
+}
+
+/* tracking box: rounded rectangle + name tag, glides smoothly between tracker updates */
+let shownBox = null;
+function drawTrack(ctx, r, mirror, b, name, col, p, size, near, close){
+  const tb = {x:mirror ? 1 - b.x - b.w : b.x, y:b.y, w:b.w, h:b.h};
+  if (!shownBox || Math.abs(shownBox.x - tb.x) > .45 || Math.abs(shownBox.y - tb.y) > .45) shownBox = {...tb};
+  else for (const k of ['x', 'y', 'w', 'h']) shownBox[k] += (tb[k] - shownBox[k]) * .3;
+  const sb = shownBox, x = r.x + sb.x*r.w, y = r.y + sb.y*r.h, w = sb.w*r.w, h = sb.h*r.h;
+  ctx.save();
+  ctx.setLineDash(close ? [] : [9, 7]);                       // dashed = seen but still too far to act
+  ctx.strokeStyle = col; ctx.lineWidth = 3; rr(ctx, x, y, w, h, 12); ctx.stroke(); ctx.setLineDash([]);
   ctx.font = '600 12.5px Sora,system-ui'; ctx.textBaseline = 'middle';
-  for (const d of st.dets || []){
-    const bx = mirror ? 1 - d.box.x - d.box.w : d.box.x;
-    const x = r.x + bx*r.w, y = r.y + d.box.y*r.h, w = d.box.w*r.w, h = d.box.h*r.h, col = detColor(d.label);
-    ctx.strokeStyle = col; ctx.lineWidth = 3; rr(ctx, x, y, w, h, 10); ctx.stroke();
-    const label = `${d.label} ${Math.round(d.score*100)}%`, tw = ctx.measureText(label).width + 16;
-    const tx = clamp(x, r.x + 2, r.x + r.w - tw - 2), ty = y > r.y + 26 ? y - 24 : y + 4;   // tag sits on top of the box, or inside if the box touches the top
-    ctx.fillStyle = col; rr(ctx, tx, ty, tw, 21, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(label, tx + 8, ty + 11);
-  }
+  const label = `${name} ${p}% · ${close ? (near ? 'close' : 'in view') : 'far'}`, tw = ctx.measureText(label).width + 16;
+  const tx = clamp(x, r.x + 2, r.x + r.w - tw - 2), ty = y > r.y + 26 ? y - 24 : y + 4;
+  ctx.fillStyle = col; rr(ctx, tx, ty, tw, 21, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(label, tx + 8, ty + 11);
+  ctx.restore();
 }
 
 /* ---------- train prediction preview ---------- */
@@ -2765,6 +2845,7 @@ $('#ckCamBtn').onclick = () => Cam.power(true);
 $('#testBtn').onclick = () => Test.start();
 $('#testStop').onclick = () => Test.stop();
 $('#testReset').onclick = () => Test.reset();
+$('#testList').addEventListener('click', e => { const b = e.target.closest('[data-near]'); if (b) Test.setNear(b.dataset.near); });
 $('#gatePair').onclick = () => BLE.pair();
 $('#gateSkip').onclick = () => { S.previewNoCar = true; updateStage(); };
 $('#emptyBtn').onclick = () => (S.role === 'controller' && Link.linked && S.mode === 'live') ? Link.send({t:'cmd', c:{k:'cam', a:'power'}}) : Cam.power(true);
@@ -2818,16 +2899,16 @@ const rlEl = $('#ruleList');
 rlEl.addEventListener('click', e => {
   const card = e.target.closest('.rule'); if (!card) return; const key = card.dataset.key, r = ruleFor(key);
   const a = e.target.closest('[data-act]');
+  if (a && r && key === 'idle'){ r.action = a.dataset.act; if (!(r.value >= 10)) r.value = 60; Model.changed(); renderRules(); return; }
   if (a && r){ r.action = a.dataset.act; if (r.action === 'limit' && (r.value < 10 || r.value > 100)) r.value = 60; if (r.action === 'stopgo' && (r.value < 1 || r.value > 10)) r.value = 3; Model.changed(); renderRules(); renderClasses(); }
   if (e.target.closest('[data-delb]')){ delete Model.builtin[key.slice(2)]; Model.changed(); renderRules(); }
 });
 rlEl.addEventListener('input', e => {
   const f = e.target.dataset.f; if (!f) return; const card = e.target.closest('.rule'), r = ruleFor(card.dataset.key); if (!r) return;
   if (f === 'lcd') r.lcd = e.target.value.toUpperCase().slice(0, 20);
-  else { r[f] = +e.target.value; const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = f === 'value' ? (r.action === 'limit' ? r.value + '%' : r.value + ' s') : f === 'hold' ? r.hold + ' s' : r.minConf + '%'; }
+  else { r[f] = +e.target.value; const o = e.target.parentElement.querySelector('output'); if (o) o.textContent = f === 'near' ? (r.near ? 'size ≥ ' + r.near + '%' : 'Any distance') : f === 'value' ? (r.action === 'limit' || r.action === 'go' ? r.value + '%' : r.value + ' s') : f === 'hold' ? r.hold + ' s' : r.minConf + '%'; }
 });
 rlEl.addEventListener('change', () => { Model.changed(); renderClasses(); });
-$('#addBuiltin').onclick = () => { const v = $('#builtinSel').value; if (!v) return; Model.builtin[v] = defaultRule(v); Model.changed(); renderRules(); };
 $('#exportBtn').onclick = () => {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(Model.toJSON(8))], {type:'application/json'}));
   a.download = 'cogno-pilot-training.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -2864,9 +2945,7 @@ $('#cruise').oninput = e => { $('#cruiseOut').textContent = e.target.value + '%'
 $('#cruise').onchange = e => setSetting('cruise', +e.target.value);
 $('#trim').oninput = e => { $('#trimOut').textContent = (+e.target.value > 0 ? '+' : '') + e.target.value; };
 $('#trim').onchange = e => setSetting('trim', +e.target.value);
-$('#tDet').onchange = e => setSetting('detector', e.target.checked);
 $('#tOcr').onchange = e => setSetting('ocr', e.target.checked);
-$('#tGuard').onchange = e => setSetting('guard', e.target.checked);
 
 /* manual drive pop-up */
 function closeMan(){ $('#manPop').hidden = true; $('#manTile').classList.remove('on'); }
