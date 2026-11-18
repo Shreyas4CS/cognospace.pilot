@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" id="touchIcon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2300d1bf'/%3E%3Cstop offset='1' stop-color='%232f7bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M18 44 28 20h8l10 24' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 30v4M32 40v2' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 :root{
@@ -29,7 +29,7 @@
   --r:20px;
   --sh:0 1px 2px rgba(10,40,70,.04),0 12px 32px rgba(10,60,100,.07);
   --sh2:0 2px 8px rgba(10,40,70,.06),0 26px 60px rgba(20,140,220,.16);
-  --fd:'Fredoka','Nunito',system-ui,sans-serif;
+  --fd:'Manrope','Segoe UI',system-ui,sans-serif;
   --fb:'Sora','Segoe UI',system-ui,-apple-system,sans-serif;
   --bar:64px;
 }
@@ -347,7 +347,7 @@ select.txt{appearance:auto}
 .hs-cell small,.hs-title small{display:block;font-family:var(--fd);font-size:11.5px;letter-spacing:.2em;color:var(--brand-ink);font-weight:600}
 .hs-cell b{font-family:var(--fd);font-size:22px;font-weight:700;letter-spacing:.06em}
 .hs-cell b em{font-style:normal;font-size:13px;color:var(--muted);margin-left:2px}
-.hs-title{flex:1;text-align:center;border-left:1px solid var(--line);border-right:1px solid var(--line);padding:0 14px;min-width:0}
+.hs-title{flex:1;text-align:center;border-left:1px solid var(--line);padding:0 14px 0 18px;min-width:0}
 .hs-title b{display:block;font-family:var(--fd);font-size:20px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .hs-title b.limit{background:linear-gradient(120deg,#ff9f1c,#ffbf2e);-webkit-background-clip:text;background-clip:text}
 .hs-title b.stop{background:linear-gradient(120deg,#ff4d67,#ff7a8a);-webkit-background-clip:text;background-clip:text}
@@ -803,7 +803,6 @@ select.txt{appearance:auto}
     <div class="hud-strip" id="hudStrip">
       <div class="hs-cell"><small>SPEED</small><b><span id="hsSpeed">0</span><em>%</em></b></div>
       <div class="hs-title"><b id="apState" class="idle">AUTOPILOT READY</b><small id="hsSub">Road clear</small></div>
-      <div class="hs-cell r"><small>SESSION</small><b id="hsTime">00:00</b></div>
     </div>
 
     <!-- ===== LIVE: left column ===== -->
@@ -906,7 +905,6 @@ select.txt{appearance:auto}
       </div>
       <div class="dock-c">
         <button class="go-btn" id="apBtn"><span class="gi"><svg><use href="#i-play"/></svg></span><span>Start autopilot</span></button>
-        <button class="stop-btn" id="estopBtn"><span class="gi"><svg><use href="#i-hand"/></svg></span><span>Stop safely</span></button>
       </div>
       <div class="dock-r" id="dockTools"></div>
     </div>
@@ -2692,7 +2690,6 @@ drop.addEventListener('drop', e => Upload.run([...e.dataTransfer.files]));
 
 /* live */
 $('#apBtn').onclick = () => { const st = curState(); cmd({k:'ap', on:!(st && st.ap)}); };
-$('#estopBtn').onclick = () => cmd({k:'estop'});
 $('#cruise').oninput = e => { $('#cruiseOut').textContent = e.target.value + '%'; };
 $('#cruise').onchange = e => setSetting('cruise', +e.target.value);
 $('#trim').oninput = e => { $('#trimOut').textContent = (+e.target.value > 0 ? '+' : '') + e.target.value; };
@@ -2740,7 +2737,7 @@ let tickN = 0;
 setInterval(() => {
   if (!S.role) return;
   tickN++;
-  if (S.mode === 'live'){ renderLive(curState()); if (S.session){ const t = Math.floor((Date.now() - S.session.start)/1000), h = Math.floor(t/3600), m = Math.floor(t/60) % 60, sec = t % 60; $('#hsTime').textContent = (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); } }
+  if (S.mode === 'live'){ renderLive(curState()); }
   if (S.role === 'vehicle'){
     if (tickN % 2 === 0) Lcd.update();
     if (Link.linked && (S.mode === 'live' || tickN % 4 === 0)) Link.send({t:'st', ...Engine.snapshot(), mode:S.mode === 'live' ? Engine.snapshot().mode : 'TRAIN'});
