@@ -1180,7 +1180,7 @@ const camEl = $('#cam'), remoteEl = $('#remote'), overlay = $('#overlay'), stage
    ===================================================================== */
 function defaultRule(name){
   const n = name.toLowerCase();
-  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:70, lcd:(lcd || name).toUpperCase().slice(0, 20)});
+  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:60, lcd:(lcd || name).toUpperCase().slice(0, 20)});
   if (/school|child|kid/.test(n)) return R('limit', 40, 6, 'SCHOOL ZONE - SLOW');
   if (/zebra|crossing|pedestrian|walk/.test(n)) return R('stopgo', 3, 0, 'ZEBRA CROSSING');
   if (/person/.test(n)) return R('stop', 0, 1, 'PERSON AHEAD');
@@ -1234,6 +1234,8 @@ const Model = {
     if (!j || !Array.isArray(j.classes)) return false;
     this.classes = j.classes.map(c => ({...c, keywords:c.keywords || '', thumbs:c.thumbs || [], vecs:unpackVecs(c.vecs)}));
     this.builtin = j.builtin || {}; this.updatedAt = j.at || Date.now(); this.ema.clear();
+    const fix = r => { if (r && (r.minConf == null || r.minConf === 70)) r.minConf = 60; };   // old default was 70: too strict for live driving
+    this.classes.forEach(c => fix(c.rule)); Object.values(this.builtin).forEach(fix);
     if (!this.classes.some(c => c.bg)) this.classes.unshift({id:uid(), name:'Clear road', bg:true, color:'#94a3b8', keywords:'', rule:null, vecs:[], thumbs:[]});
     return true;
   },
@@ -1249,16 +1251,17 @@ const Model = {
     }});
     if (!top.length) return null;
     const score = new Array(this.classes.length).fill(0), best = new Array(this.classes.length).fill(-1); let tot = 0;
-    for (const t of top){ const w = Math.max(0.001, t.d); score[t.ci] += w; tot += w; best[t.ci] = Math.max(best[t.ci], t.d); }
+    const d0 = top[0].d;
+    for (const t of top){ const w = Math.exp(12*(t.d - d0)); score[t.ci] += w; tot += w; best[t.ci] = Math.max(best[t.ci], t.d); }
     const list = this.classes.map((c, ci) => ({c, p:score[ci]/tot, sim:best[ci]})).sort((a, b) => b.p - a.p);
     return {list, top:list[0]};
   },
-  classify(v){            // smoothed over time for driving
+  /* one decision used by BOTH the Train test and Live driving, so a passed test means it will act on the road */
+  need(c){ return (c?.rule?.minConf ?? 60) / 100; },
+  sure(t){ return !!t && t.sim >= 0.5 && t.p >= this.need(t.c); },
+  classify(v){
     const r = this.predict(v); if (!r) return null;
-    for (const c of this.classes){ const it = r.list.find(x => x.c === c); const p = it ? it.p : 0; this.ema.set(c.id, (this.ema.get(c.id) ?? p)*0.55 + p*0.45); }
-    let bestC = null, bestP = -1; for (const c of this.classes){ const p = this.ema.get(c.id); if (p > bestP) { bestP = p; bestC = c; } }
-    const sim = r.list.find(x => x.c === bestC)?.sim ?? 0;
-    return {c:bestC, p:bestP, sim};
+    const t = r.top; return {c:t.c, p:t.p, sim:t.sim, sure:this.sure(t)};
   }
 };
 
@@ -1562,21 +1565,21 @@ const Engine = {
       const t0 = performance.now(), f = AI.ready ? grab() : null;
       if (f){
         try {
-          if (S.settings.detector && n % 2 === 0) this.dets = AI.detect(f);
-          else { const v = AI.embed(f); this.custom = Model.classify(v); }
-          if (!S.settings.detector) this.dets = [];
+          this.custom = Model.classify(AI.embed(f));                       // custom signs: every frame (fast reaction)
+          if (S.settings.detector){ if (n % 3 === 0) this.dets = AI.detect(f); }  // COCO detector: every 3rd frame
+          else this.dets = [];
           this.perceive();
         } catch (e) { console.warn(e); }
         n++;
         if (performance.now() - t > 1000){ this.fps = Math.round(n * 1000 / (performance.now() - t)); n = 0; t = performance.now(); }
       } else if (!Cam.stream){ this.dets = []; this.custom = null; this.fps = 0; this.streak.clear(); n = 0; t = performance.now(); }
-      await sleep(Math.max(10, 66 - (performance.now() - t0)));
+      await sleep(Math.max(5, 50 - (performance.now() - t0)));
     }
   },
   perceive(){
     const now = Date.now(), seen = [];
     const cu = this.custom;
-    if (cu && cu.c && !cu.c.bg && cu.c.rule && cu.sim >= 0.5 && cu.p*100 >= cu.c.rule.minConf) seen.push({key:'c:'+cu.c.id, label:cu.c.name, rule:cu.c.rule, conf:cu.p});
+    if (cu && cu.c && !cu.c.bg && cu.c.rule && cu.sure) seen.push({key:'c:'+cu.c.id, label:cu.c.name, rule:cu.c.rule, conf:cu.p});
     for (const c of Model.classes){
       const h = OCR.hits.get(c.id);
       if (h && now - h < 2500 && !c.bg && c.rule && !seen.some(s => s.key === 'c:'+c.id)) seen.push({key:'c:'+c.id, label:c.name, rule:c.rule, conf:.9, text:true});
@@ -1586,8 +1589,10 @@ const Engine = {
       if (r && d.score*100 >= r.minConf && !seen.some(s => s.key === 'b:'+d.label)) seen.push({key:'b:'+d.label, label:d.label, rule:r, conf:d.score});
     }
     const keys = new Set(seen.map(s => s.key));
-    for (const k of [...this.streak.keys()]) if (!keys.has(k)) this.streak.delete(k);
-    for (const s of seen){ const n = (this.streak.get(s.key) || 0) + 1; this.streak.set(s.key, n); if (n >= 2 || s.text) this.trigger(s); }
+    for (const [k, n] of [...this.streak]) if (!keys.has(k)){ if (n <= 1) this.streak.delete(k); else this.streak.set(k, Math.min(n, 3) - 1); }
+    let fresh = false;
+    for (const s of seen){ const n = Math.min(6, (this.streak.get(s.key) || 0) + 1); this.streak.set(s.key, n); if (n >= 2 || s.text) fresh = this.trigger(s) || fresh; }
+    if (fresh) this.tick();                // act now, don't wait for the next 100 ms tick
 
     if (S.settings.guard){
       for (const d of this.dets){
@@ -1604,15 +1609,16 @@ const Engine = {
   },
   trigger(s){
     const now = Date.now(), r = s.rule, had = this.effects.has(s.key);
-    if (r.action === 'ignore') return;
+    if (r.action === 'ignore') return false;
     if (r.action === 'limit') this.effects.set(s.key, {label:s.label, cap:r.value, until:now + Math.max(.5, r.hold)*1000, kind:'limit', lcd:r.lcd});
     else if (r.action === 'stop') this.effects.set(s.key, {label:s.label, cap:0, until:now + Math.max(.6, r.hold)*1000, kind:'stop', lcd:r.lcd});
     else if (r.action === 'stopgo'){
-      if ((this.cool.get(s.key) || 0) > now || had) return;
+      if ((this.cool.get(s.key) || 0) > now || had) return false;
       this.effects.set(s.key, {label:s.label, cap:0, until:now + r.value*1000, kind:'stop', lcd:r.lcd});
       this.cool.set(s.key, now + r.value*1000 + 6000);
     }
     if (!had) logEvent(r.action === 'limit' ? 'rule' : 'stop', `${s.label}${s.text ? ' (text)' : ''}: ${describeRule(r)}`, {label:s.label});
+    return !had;
   },
   active(){ let a = null; for (const e of this.effects.values()) if (!a || e.cap < a.cap) a = e; return a; },
   tick(){
@@ -1628,8 +1634,8 @@ const Engine = {
       this.speed = Math.round(Math.abs(man.y) * p);
     } else {
       const target = this.ap ? Math.min(S.settings.cruise, cap) : 0;
-      if (target < this.speed) this.speed = Math.max(target, this.speed - (target === 0 ? 30 : 10));
-      else this.speed = Math.min(target, this.speed + 5);
+      if (target < this.speed) this.speed = target === 0 ? 0 : Math.max(target, this.speed - 25);
+      else this.speed = Math.min(target, this.speed + 6);
       const t = S.settings.trim / 100;
       L = this.speed * (1 + t); R = this.speed * (1 - t);
     }
@@ -1654,7 +1660,7 @@ const Engine = {
   snapshot(){
     const act = this.active(), now = Date.now();
     const man = this.manual && this.manual.until > now;
-    const cu = this.custom && this.custom.c && !this.custom.c.bg && this.custom.p > .5 && this.custom.sim >= .5 ? this.custom : null;
+    const cu = this.custom && this.custom.c && !this.custom.c.bg && this.custom.sure ? this.custom : null;
     return {
       mode: this.estop ? 'E-STOP' : man ? 'MANUAL' : this.ap ? 'AUTO' : 'PAUSED', ap:this.ap, estop:this.estop,
       speed:Math.round(this.speed), cap: act ? act.cap : 100, active: act ? {label:act.label, kind:act.kind, lcd:act.lcd} : null,
@@ -1997,7 +2003,7 @@ const Pack = {
         if (j.p){
           c = Model.classes.find(x => x.name.toLowerCase() === j.p.name.toLowerCase()) || Model.add(j.p.name);
           c.color = j.p.color; c.keywords = c.keywords || j.p.kw;
-          c.rule = {action:j.p.rule[0], value:j.p.rule[1], hold:j.p.rule[2], minConf:70, lcd:j.p.rule[3]};
+          c.rule = {action:j.p.rule[0], value:j.p.rule[1], hold:j.p.rule[2], minConf:60, lcd:j.p.rule[3]};
         } else c = Model.classes.find(x => x.bg) || Model.add('Clear road', true);
         st.textContent = `Generating “${c.name}”…`;
         for (let i = 0; i < j.n; i++){
@@ -2090,7 +2096,7 @@ const Upload = {
     if (!c){
       c = Model.add(name.slice(0, 28));
       const p = PACK.find(x => x.name.toLowerCase() === name.toLowerCase());
-      if (p){ c.color = p.color; c.keywords = p.kw; c.rule = {action:p.rule[0], value:p.rule[1], hold:p.rule[2], minConf:70, lcd:p.rule[3]}; }
+      if (p){ c.color = p.color; c.keywords = p.kw; c.rule = {action:p.rule[0], value:p.rule[1], hold:p.rule[2], minConf:60, lcd:p.rule[3]}; }
     }
     return c;
   },
@@ -2179,7 +2185,7 @@ const Test = {
   step(r){
     if (!r) this.cur = null;
     else {
-      const t = r.top, sure = t.sim >= .5 && t.p >= .55;
+      const t = r.top, sure = Model.sure(t);
       this.cur = {c:t.c, p:t.p, sure, list:r.list};
       if (sure){
         this.streak = this.streak.id === t.c.id ? {id:t.c.id, n:this.streak.n + 1} : {id:t.c.id, n:1};
