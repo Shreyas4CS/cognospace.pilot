@@ -1503,7 +1503,10 @@ function grabOCR(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw
 const Crop = {
   box(f){
     const W = f.width, H = f.height, m = Math.min(W, H), b0 = {x:(W - m*.7)/2, y:(H - m*.7)/2, s:m*.7};
-    const o = Tracker.measure(f, b0) || {x:b0.x + b0.s*.2, y:b0.y + b0.s*.2, w:b0.s*.6, h:b0.s*.6}, cx = o.x + o.w/2, cy = o.y + o.h/2;
+    let o = Tracker.measure(f, b0);
+    // sanity: the object is held in the MIDDLE and is not tiny / huge; otherwise just take the middle
+    if (!o || Math.abs(o.x + o.w/2 - W/2) > m*.2 || Math.abs(o.y + o.h/2 - H/2) > m*.22 || Math.max(o.w, o.h) < m*.12) o = {x:b0.x + b0.s*.2, y:b0.y + b0.s*.2, w:b0.s*.6, h:b0.s*.6};
+    const cx = o.x + o.w/2, cy = o.y + o.h/2;
     const sz = clamp(Math.max(o.w, o.h)*1.15, m*.15, m);
     return Tracker.fit({x:cx - sz/2, y:cy - sz/2, s:sz}, W, H);
   },
@@ -2325,7 +2328,7 @@ Pack.downloadImages = async function(){
    ===================================================================== */
 const Tracker = {
   track:null, scanI:0, gridKey:'', G:[], guess:null,
-  reset(){ this.track = null; this.guess = null; },
+  reset(){ this.track = null; this.guess = null; this.probe = null; },
   grid(W, H){
     const key = W + 'x' + H; if (key === this.gridKey) return this.G;
     const m = Math.min(W, H), out = [];
@@ -2333,8 +2336,10 @@ const Tracker = {
       const sz = m*k, nx = Math.max(1, Math.round((W - sz)/(sz*.5)) + 1), ny = Math.max(1, Math.round((H - sz)/(sz*.5)) + 1);
       for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) out.push({x: nx > 1 ? i*(W - sz)/(nx - 1) : (W - sz)/2, y: ny > 1 ? j*(H - sz)/(ny - 1) : (H - sz)/2, s:sz});
     }
-    { const sz = m*.36;                                        // small windows (farther objects) only in the middle of the view
-      for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) out.push({x:W/2 - sz/2 + (i - 1)*sz*.6, y:H/2 - sz/2 + (j - 1)*sz*.6, s:sz}); }
+    for (const k of [.36, .25]){                                // smaller windows (farther objects) across the middle band of the view
+      const sz = m*k, nx = Math.max(1, Math.round((W*.9 - sz)/(sz*.6)) + 1);
+      for (let j = -1; j <= 1; j++) for (let i = 0; i < nx; i++) out.push({x:W*.05 + (nx > 1 ? i*(W*.9 - sz)/(nx - 1) : (W*.9 - sz)/2), y:clamp(H/2 - sz/2 + j*sz*.6, 0, H - sz), s:sz});
+    }
     // centre first, then outwards: the road ahead matters most
     out.sort((a, b) => Math.hypot(a.x + a.s/2 - W/2, a.y + a.s/2 - H/2)/a.s - Math.hypot(b.x + b.s/2 - W/2, b.y + b.s/2 - H/2)/b.s);
     this.gridKey = key; this.G = out; return out;
@@ -2342,50 +2347,58 @@ const Tracker = {
   fit(b, W, H){ const m = Math.min(W, H), sz = clamp(b.s, m*.12, m); return {x:clamp(b.x, 0, W - sz), y:clamp(b.y, 0, H - sz), s:sz}; },
   step(f){
     const W = f.width, H = f.height, m = Math.min(W, H), cands = [], t = this.track;
-    if (t){
-      const b = t.box, cx = b.x + b.s/2, cy = b.y + b.s/2;
-      for (const [dx, dy, ds] of [[0, 0, 1], [-.18, 0, 1], [.18, 0, 1], [0, -.18, 1], [0, .18, 1], [0, 0, .82], [0, 0, 1.22]]){
+    const focus = t ? t.box : this.probe;          // follow the track, or zoom in on a promising "maybe"
+    if (focus){
+      const b = focus, cx = b.x + b.s/2, cy = b.y + b.s/2;
+      // same place at 5 sizes + 4 small shifts: KNN tells which one frames the trained object best
+      for (const [dx, dy, ds] of [[0, 0, 1], [0, 0, .78], [0, 0, .89], [0, 0, 1.13], [0, 0, 1.3], [-.16, 0, 1], [.16, 0, 1], [0, -.16, 1], [0, .16, 1]]){
         const sz = b.s*ds; cands.push(this.fit({x:cx + dx*b.s - sz/2, y:cy + dy*b.s - sz/2, s:sz}, W, H));
       }
     }
-    const G = this.grid(W, H), nScan = t ? 2 : 8;
+    const G = this.grid(W, H), nScan = t ? 2 : focus ? 4 : 8;
     for (let k = 0; k < nScan; k++) cands.push(G[(this.scanI++) % G.length]);
-    let best = null, guess = null; const hits = [];
+    let best = null, guess = null, probe = null; const hits = [];
     for (const b of cands){
       const r = Model.predict(AI.embedBox(f, b)); if (!r) return null;
       const top = r.top;
-      if (!top.c.bg && Model.sure(top) && top.mx >= .6 && top.mx - r.bgMx >= .03) hits.push({c:top.c, p:top.p, sim:top.sim, sc:top.p*top.sim*(1 + 4*(top.mx - r.bgMx)), box:b});
+      // score = how closely this window matches a trained sample (KNN nearest), and how much better than "Clear road"
+      if (!top.c.bg && Model.sure(top) && top.mx >= .6 && top.mx - r.bgMx >= .03) hits.push({c:top.c, p:top.p, sim:top.sim, sc:top.mx + (top.mx - r.bgMx), box:b});
       const g = r.list.find(x => !x.c.bg); if (g && (!guess || g.p > guess.p)) guess = {c:g.c, p:g.p};
+      if (!top.c.bg && top.p >= .4 && (!probe || top.mx > probe.mx)) probe = {mx:top.mx, box:b};
     }
     this.guess = guess;
+    this.probe = !hits.length && probe ? probe.box : null;
     if (hits.length){
-      const top = hits.reduce((a, h) => h.sc > a.sc ? h : a);
-      // among windows that match about as well, take the LARGEST: it contains the whole object plus a
-      // little background around it, so the outline measurement below can find the real edges
-      best = hits.filter(h => h.c === top.c && h.sc >= top.sc*.92).reduce((a, h) => h.box.s > a.box.s ? h : a);
+      // training samples are tight cut-outs of the object, so the BEST matching window is the one that frames it tightly
+      best = hits.reduce((a, h) => h.sc > a.sc ? h : a);
     }
     if (best){
       if (t && best.c === t.c){
         const k = .55; t.box = {x:t.box.x + (best.box.x - t.box.x)*k, y:t.box.y + (best.box.y - t.box.y)*k, s:t.box.s + (best.box.s - t.box.s)*k};
-        t.p = t.p*.4 + best.p*.6; t.sim = best.sim; t.hits++; t.miss = 0;
-      } else if (!t || t.miss > 0 || best.sc > t.p*t.sim*1.25){
-        this.track = {c:best.c, p:best.p, sim:best.sim, box:best.box, hits:1, miss:0};
+        t.p = t.p*.4 + best.p*.6; t.sim = best.sim; t.sc = best.sc; t.hits++; t.miss = 0;
+      } else if (!t || t.miss > 0 || best.sc > (t.sc || 0) + .05){
+        this.track = {c:best.c, p:best.p, sim:best.sim, sc:best.sc, box:best.box, hits:1, miss:0};
       } else t.miss++;
     } else if (t){ t.miss++; if (t.miss >= 4) this.track = null; }
     const tr = this.track;
     if (tr){
-      /* measure the REAL object inside the matched window: big on screen = close, small = far */
-      const o = this.measure(f, tr.box);
+      /* SIZE (= distance) comes from the KNN window: it frames the object like the training cut-outs did
+         (object ≈ window / 1.15). The outline check is only used to tidy the box when it clearly agrees. */
+      const b = tr.box; let obj = {x:b.x + b.s*.065, y:b.y + b.s*.065, w:b.s*.87, h:b.s*.87}, lin = b.s/1.15;
+      const o = this.measure(f, b);
       if (o){
-        const sz = o.lin / m;
-        tr.hist = tr.hits <= 1 || !tr.hist ? [sz] : [...tr.hist.slice(-4), sz];
-        tr.size = [...tr.hist].sort((a, b) => a - b)[tr.hist.length >> 1];
-        tr.obj = tr.obj && tr.hits > 1 ? {x:tr.obj.x + (o.x - tr.obj.x)*.5, y:tr.obj.y + (o.y - tr.obj.y)*.5, w:tr.obj.w + (o.w - tr.obj.w)*.5, h:tr.obj.h + (o.h - tr.obj.h)*.5} : o;
-        // keep the search window centred on the object so the tracker follows it as it moves
-        const cx = tr.obj.x + tr.obj.w/2, cy = tr.obj.y + tr.obj.h/2;
-        const fill = Math.max(o.w, o.h) / tr.box.s, ns = fill > .8 ? tr.box.s*1.25 : fill < .3 ? tr.box.s*.88 : tr.box.s;   // window follows the object's size
-        tr.box = this.fit({x:cx - ns/2, y:cy - ns/2, s:ns}, W, H);
-      } else if (tr.size == null) tr.size = 0;                    // not measured yet: treat as far
+        // trust the outline only if it covers the middle of the KNN window and has a similar size
+        const wcx = b.x + b.s/2, wcy = b.y + b.s/2, covers = wcx > o.x && wcx < o.x + o.w && wcy > o.y && wcy < o.y + o.h;
+        if (covers && o.lin > lin*.6 && o.lin < lin*1.8){
+          obj = o; lin = (lin + o.lin)/2;
+          const ns = clamp(o.lin*1.15, b.s*.8, b.s*1.25);            // nudge the window onto the whole object for the next frame
+          tr.box = this.fit({x:o.x + o.w/2 - ns/2, y:o.y + Math.min(o.h, o.w)/2 - ns/2, s:ns}, W, H);
+        }
+      }
+      const sz = lin / m;
+      tr.hist = tr.hits <= 1 || !tr.hist ? [sz] : [...tr.hist.slice(-4), sz];
+      tr.size = [...tr.hist].sort((a, c) => a - c)[tr.hist.length >> 1];
+      tr.obj = tr.obj && tr.hits > 1 ? {x:tr.obj.x + (obj.x - tr.obj.x)*.5, y:tr.obj.y + (obj.y - tr.obj.y)*.5, w:tr.obj.w + (obj.w - tr.obj.w)*.5, h:tr.obj.h + (obj.h - tr.obj.h)*.5} : obj;
     }
     return this.state(W, H);
   },
