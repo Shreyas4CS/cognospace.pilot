@@ -476,7 +476,22 @@ select.txt{appearance:auto}
 .stage-tools:empty{display:none}
 .stage-tools .camtools{flex-direction:column;flex-wrap:nowrap;gap:8px;padding:8px;border-radius:20px;background:rgba(255,255,255,.72);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.85);box-shadow:0 10px 30px rgba(10,60,100,.16)}
 .stage-tools .camtools .sp,.stage-tools .camtools .stat{display:none!important}
-.stage-tools .icon-btn{width:40px;height:40px;border-radius:13px}
+.stage-tools .icon-btn{width:50px;height:50px;border-radius:15px}
+.stage-tools .icon-btn svg{width:22px;height:22px}
+.stage-tools .camtools{gap:10px!important;padding:10px!important}
+/* dock buttons + details panel */
+.dock-btn{height:56px;padding:0 18px;border-radius:18px;display:flex;align-items:center;gap:8px;font-family:var(--fd);font-weight:700;font-size:14.5px;color:var(--ink2);background:#fff;border:1.5px solid var(--line2);box-shadow:0 4px 12px rgba(10,60,100,.06);transition:.15s;flex:none}
+.dock-btn svg{width:20px;height:20px}
+.dock-btn:hover{border-color:var(--teal,#00b8c4)}
+.dock-btn.on{background:linear-gradient(135deg,rgba(0,184,196,.12),rgba(47,123,255,.12));border-color:var(--teal,#00b8c4);color:var(--ink)}
+.dock-btn .caret{font-style:normal;font-size:11px;transition:transform .2s}
+#app.show-det #detBtn .caret{transform:rotate(180deg)}
+.det-head{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 0 6px}
+.det-head b{font-family:var(--fd);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.det-head .icon-btn{width:36px;height:36px}
+.col-left .tiles{display:grid!important;grid-template-columns:1fr!important}
+/* live: no duplicate banners on the camera (the strip above already says it) */
+#app.live .path-pill{display:none!important}
 .stage-tools .zoom{flex-direction:column;padding:3px}
 .stage-tools .zoom button{min-width:34px;height:32px}
 .tile>span:not(.ti){display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -554,11 +569,12 @@ select.txt{appearance:auto}
   #app.train .predict{grid-area:predict}
   #app.train .side{grid-area:side;overflow:auto;padding:2px 4px 16px 2px;margin:-2px -4px 0 -2px;scrollbar-width:thin}
   /* live: cockpit */
-  #app.live .layout{grid-template-columns:340px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"strip strip" "left stage" "left tiles" "left dock";row-gap:14px}
+  /* live: big camera + controls; everything else lives in the Details panel (hidden until asked) */
+  #app.live .layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"strip" "stage" "dock";row-gap:14px}
+  #app.live.show-det .layout{grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"strip left" "stage left" "dock left"}
   #app.live .hud-strip{grid-area:strip;display:flex}
-  #app.live .col-left{grid-area:left;display:flex;overflow:auto;padding:2px 4px 6px 2px;margin:-2px -4px 0 -2px;scrollbar-width:thin}
+  #app.live.show-det .col-left{grid-area:left;display:flex;overflow:auto;padding:2px 4px 6px 2px;margin:-2px -4px 0 -2px;scrollbar-width:thin}
   #app.live .stage{grid-area:stage}
-  #app.live .tiles{grid-area:tiles;display:grid}
   #app.live .dock{grid-area:dock;display:flex}
   #app.live .side,#app.live .predict{display:none}
   #app.live .stage .gauge{display:none}
@@ -573,8 +589,7 @@ select.txt{appearance:auto}
   #app.live .hud-strip{display:flex;order:0}
   #app.live .stage{order:1}
   #app.live .dock{display:flex;order:2;flex-wrap:wrap}
-  #app.live .tiles{display:grid;order:3}
-  #app.live .col-left{display:flex;order:4}
+  #app.live.show-det .col-left{display:flex;order:4}
   #app.live .side,#app.live .predict{display:none}
   #app.train .stage{order:1}
   #app.train #camtools{order:2}
@@ -594,8 +609,8 @@ select.txt{appearance:auto}
   #endBtn{width:42px;padding:0!important}
 }
 @media (max-width:1020px) and (min-width:641px){
-  #app.live .col-left{display:grid;grid-template-columns:1fr 1fr;align-items:start}
-  #app.live .col-left>.card:last-child{grid-column:1 / -1}
+  #app.live.show-det .col-left{display:grid;grid-template-columns:1fr 1fr;align-items:start}
+  #app.live .col-left>.card:last-child,#app.live .col-left>.det-head,#app.live .col-left>.tiles{grid-column:1 / -1}
 }
 @media (max-width:640px){
   :root{--bar:58px}
@@ -856,6 +871,10 @@ select.txt{appearance:auto}
 
     <!-- ===== LIVE: left column ===== -->
     <div class="col-left" id="colLeft">
+      <div class="det-head"><b>Details</b><button class="icon-btn" id="detClose" title="Hide details"><svg><use href="#i-x"/></svg></button></div>
+      <div class="tiles" id="liveTiles">
+        <label class="tile" id="tileOcr"><input type="checkbox" id="tOcr"><span class="ti"><svg><use href="#i-text"/></svg></span><span><b>Read sign text</b><small>Matches saved words</small></span></label>
+      </div>
       <div class="card">
         <div class="card-h"><b>Road events</b><span class="live-tag">LIVE</span></div>
         <div class="ev-list" id="roadEv"></div>
@@ -940,11 +959,6 @@ select.txt{appearance:auto}
       <div id="predBars"><div class="empty" style="padding:6px">Add objects and record samples to see predictions here.</div></div>
     </div>
 
-    <!-- ===== LIVE: feature tiles ===== -->
-    <div class="tiles" id="liveTiles">
-      <label class="tile" id="tileOcr"><input type="checkbox" id="tOcr"><span class="ti"><svg><use href="#i-text"/></svg></span><span><b>Read sign text</b><small>Matches saved words</small></span></label>
-      <button class="tile" id="manTile" type="button"><span class="ti"><svg><use href="#i-joy"/></svg></span><span><b>Manual drive</b><small>Joystick control</small></span></button>
-    </div>
 
     <!-- ===== LIVE: dock ===== -->
     <div class="dock" id="dock">
@@ -954,6 +968,8 @@ select.txt{appearance:auto}
       </div>
       <div class="dock-c">
         <button class="go-btn" id="apBtn"><span class="gi"><svg><use href="#i-play"/></svg></span><span>Start autopilot</span></button>
+        <button class="dock-btn" id="manTile" type="button" title="Drive by hand"><svg><use href="#i-joy"/></svg><span>Manual</span></button>
+        <button class="dock-btn" id="detBtn" type="button" title="Road events, speed dial, detections, log"><svg><use href="#i-rules"/></svg><span>Details</span><i class="caret">▾</i></button>
       </div>
       <div class="dock-r" id="dockTools"></div>
     </div>
@@ -1461,6 +1477,7 @@ function grab(){
   const k = 384 / Math.min(vw, vh), W = Math.round(vw*k), H = Math.round(vh*k);
   drawT(pctx, proc, W, H); return proc;
 }
+remoteEl.addEventListener('playing', () => updateStage()); remoteEl.addEventListener('resize', () => updateStage());
 const rproc = document.createElement('canvas'), rpctx = rproc.getContext('2d', {willReadFrequently:true});
 function grabRemote(){
   const vw = remoteEl.videoWidth, vh = remoteEl.videoHeight; if (!vw || !remoteEl.srcObject) return null;
@@ -1837,7 +1854,7 @@ const Link = {
     p.on('call', call => {
       try { this.call?.close(); } catch {}
       this.call = call; call.answer();
-      call.on('stream', s => { remoteEl.srcObject = s; remoteEl.play().catch(() => {}); updateStage(); });
+      call.on('stream', s => { remoteEl.srcObject = s; remoteEl.play().catch(() => {}); updateStage(); s.getVideoTracks().forEach(t => { t.onmute = t.onunmute = t.onended = () => updateStage(); }); });
       call.on('close', () => { if (this.call === call){ remoteEl.srcObject = null; updateStage(); } });
     });
     this.timers.push(setInterval(() => this.scan(), 6000));
@@ -2591,6 +2608,10 @@ function renderSetup(){
   $('#ckLinkTxt').textContent = Link.linked ? `Linked to ${S.linkedName}` : `Waiting for Control Station · fleet “${Link.room()}”`;
 }
 /* Control Station can train with the VEHICLE's camera (same camera that drives = best results) */
+function remoteCamOff(){
+  const live = !!remoteEl.srcObject && remoteEl.videoWidth > 0 && remoteEl.srcObject.getVideoTracks?.().some(t => t.readyState === 'live' && !t.muted);
+  return !live && !!S.remote?.cam?.off;
+}
 function vehCam(){ return S.role === 'controller' && !!Link.linked && S.camSrc === 'vehicle'; }
 function remoteView(){ return S.role === 'controller' && !!Link.linked && (S.mode === 'live' || S.camSrc === 'vehicle'); }
 function camView(){ return remoteView() ? (S.remote?.cam || {off:true}) : Cam.info(); }
@@ -2611,7 +2632,7 @@ function updateStage(){
   const remote = remoteView();
   camEl.hidden = remote; remoteEl.hidden = !remote;
   const empty = $('#stageEmpty');
-  if (remote && S.remote?.cam?.off){ empty.hidden = false; $('#emptyT').textContent = 'Vehicle camera is off'; $('#emptyP').textContent = S.mode === 'live' ? `${S.linkedName}'s camera was turned off. Autopilot can't run without it.` : `Turn on ${S.linkedName}'s camera to train with it.`; $('#emptyBtn').hidden = false; }
+  if (remote && remoteCamOff()){ empty.hidden = false; $('#emptyT').textContent = 'Vehicle camera is off'; $('#emptyP').textContent = S.mode === 'live' ? `${S.linkedName}'s camera was turned off. Autopilot can't run without it.` : `Turn on ${S.linkedName}'s camera to train with it.`; $('#emptyBtn').hidden = false; }
   else if (remote && !remoteEl.srcObject){ empty.hidden = false; $('#emptyT').textContent = 'Waiting for vehicle camera…'; $('#emptyP').textContent = `Connecting to ${S.linkedName}'s live view.`; $('#emptyBtn').hidden = true; }
   else if (!remote && !Cam.stream){ empty.hidden = false; $('#emptyT').textContent = 'Camera is off'; $('#emptyP').textContent = S.mode === 'live' ? 'Autopilot needs the camera. Turn it on to drive.' : 'Turn it on to train objects.'; $('#emptyBtn').hidden = false; }
   else empty.hidden = true;
@@ -2905,7 +2926,7 @@ function frame(){
   }
   const st = curState(); if (!st){ shownBox = null; return; }
   const remote = S.role === 'controller' && Link.linked, vid = remote ? remoteEl : camEl;
-  const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw || st.cam?.off){ shownBox = null; return; }
+  const vw = vid.videoWidth, vh = vid.videoHeight; if (!vw || (remote ? remoteCamOff() : st.cam?.off)){ shownBox = null; return; }
   const r = contentRect(W, H, vw, vh), mirror = remote ? !!st.cam?.mirror : Cam.mirror;
   const cu = st.custom;
   if (!cu || !cu.box){ shownBox = null; return; }
@@ -3109,6 +3130,13 @@ $('#tOcr').onchange = e => setSetting('ocr', e.target.checked);
 
 /* manual drive pop-up */
 function closeMan(){ $('#manPop').hidden = true; $('#manTile').classList.remove('on'); }
+function setDetails(on){
+  $('#app').classList.toggle('show-det', on); $('#detBtn').classList.toggle('on', on); LS.set('showDet', on);
+  if (on && !COCKPIT_MQ.matches) setTimeout(() => $('#colLeft').scrollIntoView({behavior:'smooth', block:'start'}), 60);
+}
+$('#detBtn').onclick = () => setDetails(!$('#app').classList.contains('show-det'));
+$('#detClose').onclick = () => setDetails(false);
+setDetails(!!LS.get('showDet', false));
 $('#manTile').onclick = () => { const p = $('#manPop'); p.hidden = !p.hidden; $('#manTile').classList.toggle('on', !p.hidden); };
 $('#manClose').onclick = closeMan;
 
