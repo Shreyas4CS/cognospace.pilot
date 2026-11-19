@@ -1503,8 +1503,8 @@ function grabOCR(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw
 const Crop = {
   box(f){
     const W = f.width, H = f.height, m = Math.min(W, H), b0 = {x:(W - m*.7)/2, y:(H - m*.7)/2, s:m*.7};
-    const o = Tracker.measure(f, b0), cx = o.x + o.w/2, cy = o.y + o.h/2;
-    const sz = clamp(Math.max(o.w, o.h)*1.15, m*.22, m);
+    const o = Tracker.measure(f, b0) || {x:b0.x + b0.s*.2, y:b0.y + b0.s*.2, w:b0.s*.6, h:b0.s*.6}, cx = o.x + o.w/2, cy = o.y + o.h/2;
+    const sz = clamp(Math.max(o.w, o.h)*1.15, m*.15, m);
     return Tracker.fit({x:cx - sz/2, y:cy - sz/2, s:sz}, W, H);
   },
   sample(f, bg){ if (bg) return {v:AI.embed(f), b:null}; const b = this.box(f); return {v:AI.embedBox(f, b), b}; },
@@ -2339,7 +2339,7 @@ const Tracker = {
     out.sort((a, b) => Math.hypot(a.x + a.s/2 - W/2, a.y + a.s/2 - H/2)/a.s - Math.hypot(b.x + b.s/2 - W/2, b.y + b.s/2 - H/2)/b.s);
     this.gridKey = key; this.G = out; return out;
   },
-  fit(b, W, H){ const m = Math.min(W, H), sz = clamp(b.s, m*.22, m); return {x:clamp(b.x, 0, W - sz), y:clamp(b.y, 0, H - sz), s:sz}; },
+  fit(b, W, H){ const m = Math.min(W, H), sz = clamp(b.s, m*.12, m); return {x:clamp(b.x, 0, W - sz), y:clamp(b.y, 0, H - sz), s:sz}; },
   step(f){
     const W = f.width, H = f.height, m = Math.min(W, H), cands = [], t = this.track;
     if (t){
@@ -2376,14 +2376,16 @@ const Tracker = {
     if (tr){
       /* measure the REAL object inside the matched window: big on screen = close, small = far */
       const o = this.measure(f, tr.box);
-      const sz = Math.max(o.w, o.h) / m;
-      tr.hist = tr.hits <= 1 || !tr.hist ? [sz] : [...tr.hist.slice(-4), sz];
-      tr.size = [...tr.hist].sort((a, b) => a - b)[tr.hist.length >> 1];
-      tr.obj = tr.obj && tr.hits > 1 ? {x:tr.obj.x + (o.x - tr.obj.x)*.5, y:tr.obj.y + (o.y - tr.obj.y)*.5, w:tr.obj.w + (o.w - tr.obj.w)*.5, h:tr.obj.h + (o.h - tr.obj.h)*.5} : o;
-      // keep the search window centred on the object so the tracker follows it as it moves
-      const cx = tr.obj.x + tr.obj.w/2, cy = tr.obj.y + tr.obj.h/2;
-      const fill = Math.max(o.w, o.h) / tr.box.s, ns = fill > .8 ? tr.box.s*1.25 : fill < .22 ? tr.box.s*.9 : tr.box.s;   // window follows the object's size
-      tr.box = this.fit({x:cx - ns/2, y:cy - ns/2, s:ns}, W, H);
+      if (o){
+        const sz = o.lin / m;
+        tr.hist = tr.hits <= 1 || !tr.hist ? [sz] : [...tr.hist.slice(-4), sz];
+        tr.size = [...tr.hist].sort((a, b) => a - b)[tr.hist.length >> 1];
+        tr.obj = tr.obj && tr.hits > 1 ? {x:tr.obj.x + (o.x - tr.obj.x)*.5, y:tr.obj.y + (o.y - tr.obj.y)*.5, w:tr.obj.w + (o.w - tr.obj.w)*.5, h:tr.obj.h + (o.h - tr.obj.h)*.5} : o;
+        // keep the search window centred on the object so the tracker follows it as it moves
+        const cx = tr.obj.x + tr.obj.w/2, cy = tr.obj.y + tr.obj.h/2;
+        const fill = Math.max(o.w, o.h) / tr.box.s, ns = fill > .8 ? tr.box.s*1.25 : fill < .3 ? tr.box.s*.88 : tr.box.s;   // window follows the object's size
+        tr.box = this.fit({x:cx - ns/2, y:cy - ns/2, s:ns}, W, H);
+      } else if (tr.size == null) tr.size = 0;                    // not measured yet: treat as far
     }
     return this.state(W, H);
   },
@@ -2391,10 +2393,21 @@ const Tracker = {
      border colour (the floor / wall around the sign). Returns a box in frame pixels. */
   mc:null, mx:null,
   measure(f, b0){
-    const N = 48;
+    const N = 64;
     if (!this.mc){ this.mc = document.createElement('canvas'); this.mc.width = this.mc.height = N; this.mx = this.mc.getContext('2d', {willReadFrequently:true}); }
-    // look a bit wider than the window, so the border ring is (mostly) the background around the object
-    const W = f.width, H = f.height, cx = b0.x + b0.s/2, cy = b0.y + b0.s/2, e = Math.min(b0.s*1.45, Math.max(W, H));
+    const W = f.width, H = f.height, cx = b0.x + b0.s/2, cy = b0.y + b0.s/2;
+    // scene background colour = median colour of the whole picture (walls / floor usually fill most of it)
+    if (!this.gc){ this.gc = document.createElement('canvas'); this.gc.width = this.gc.height = 24; this.gx = this.gc.getContext('2d', {willReadFrequently:true}); }
+    this.gx.drawImage(f, 0, 0, 24, 24);
+    const gd = this.gx.getImageData(0, 0, 24, 24).data, ch = [[], [], []];
+    for (let i = 0; i < gd.length; i += 4){ ch[0].push(gd[i]); ch[1].push(gd[i + 1]); ch[2].push(gd[i + 2]); }
+    const gm = ch.map(a => a.sort((p, q) => p - q)[a.length >> 1]);
+    return this.measureIn(f, b0, gm, W, H, cx, cy, false);
+  },
+  measureIn(f, b0, gm, W, H, cx, cy, inside){
+    const N = 64;
+    // look wider than the window, so the border ring is (mostly) the background around the object
+    const e = Math.min(b0.s*(inside ? 2.4 : 1.45), Math.max(W, H));
     const rx = clamp(cx - e/2, 0, Math.max(0, W - e)), ry = clamp(cy - e/2, 0, Math.max(0, H - e)), rw = Math.min(e, W), rh = Math.min(e, H);
     this.mx.drawImage(f, rx, ry, rw, rh, 0, 0, N, N);
     const d = this.mx.getImageData(0, 0, N, N).data;
@@ -2405,21 +2418,30 @@ const Tracker = {
       const i = (y*N + x)*4; r += d[i]; g += d[i + 1]; bl += d[i + 2]; n++;
     }
     r /= n; g /= n; bl /= n;
+    // the ring itself looks like an object (window is INSIDE a big sign)? then measure against the scene background instead
+    if (!inside && Math.hypot(r - gm[0], g - gm[1], bl - gm[2]) > 70) return this.measureIn(f, b0, gm, W, H, cx, cy, true);
+    if (inside){ r = gm[0]; g = gm[1]; bl = gm[2]; }
     let v = 0;
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){
       if (x > 2 && x < N - 3 && y > 2 && y < N - 3) continue;
       const i = (y*N + x)*4; v += (d[i] - r)**2 + (d[i + 1] - g)**2 + (d[i + 2] - bl)**2;
     }
     const T = Math.max(55, Math.sqrt(v/n)*2.2);
-    const mask = new Uint8Array(N*N);
-    for (let j = 0; j < N*N; j++){ const i = j*4; if ((d[i] - r)**2 + (d[i + 1] - g)**2 + (d[i + 2] - bl)**2 > T*T) mask[j] = 1; }
-    // keep only the blob nearest the centre (ignores clutter at the edges of the view)
+    const mask = new Uint8Array(N*N), dd = new Float32Array(N*N);
+    for (let j = 0; j < N*N; j++){ const i = j*4, v2 = Math.sqrt((d[i] - r)**2 + (d[i + 1] - g)**2 + (d[i + 2] - bl)**2); dd[j] = v2; if (v2 > T) mask[j] = 1; }
+    // close small gaps (letters, white borders) so one sign = one blob
+    for (let pass = 0; pass < 2; pass++){
+      const m2 = mask.slice();
+      for (let j = 0; j < N*N; j++){ if (mask[j]) continue; const x = j % N; if ((x > 0 && mask[j - 1]) || (x < N - 1 && mask[j + 1]) || (j >= N && mask[j - N]) || (j < N*N - N && mask[j + N])) m2[j] = 1; }
+      mask.set(m2);
+    }
+    // pick the blob that stands out MOST (strong contrast like a sign), with only a mild preference for the centre
     const lab = new Int16Array(N*N), q = new Int32Array(N*N); let best = null, nl = 0;
     for (let j = 0; j < N*N; j++){
       if (!mask[j] || lab[j]) continue;
-      nl++; let h = 0, t = 0, cnt = 0, X0 = N, X1 = 0, Y0 = N, Y1 = 0, sx = 0, sy = 0; q[t++] = j; lab[j] = nl;
+      nl++; let h = 0, t = 0, cnt = 0, str = 0, X0 = N, X1 = 0, Y0 = N, Y1 = 0, sx = 0, sy = 0; q[t++] = j; lab[j] = nl;
       while (h < t){
-        const k = q[h++], x = k % N, y = (k / N) | 0; cnt++; sx += x; sy += y;
+        const k = q[h++], x = k % N, y = (k / N) | 0; cnt++; sx += x; sy += y; str += dd[k] - T;
         if (x < X0) X0 = x; if (x > X1) X1 = x; if (y < Y0) Y0 = y; if (y > Y1) Y1 = y;
         for (const nb of [k - 1, k + 1, k - N, k + N]){
           if (nb < 0 || nb >= N*N || lab[nb] || !mask[nb]) continue;
@@ -2427,15 +2449,16 @@ const Tracker = {
           lab[nb] = nl; q[t++] = nb;
         }
       }
-      if (cnt < 6) continue;
-      const dc = Math.hypot(sx/cnt - N/2, sy/cnt - N/2) / N, score = cnt * (1.2 - Math.min(1, dc*1.6));
+      if (cnt < 4) continue;
+      const dc = Math.hypot(sx/cnt - N/2, sy/cnt - N/2) / N, score = str * (1.25 - Math.min(.75, dc));
       if (!best || score > best.score) best = {score, cnt, X0, X1, Y0, Y1};
     }
     const kx = rw/N, ky = rh/N;
     const x0 = best?.X0, x1 = best?.X1, y0 = best?.Y0, y1 = best?.Y1;
-    if (!best || best.cnt < N*N*.02 || y1 <= y0 || x1 <= x0)   // nothing stands out: assume the sign fills ~60% of the window
-      return {x:b0.x + b0.s*.2, y:b0.y + b0.s*.2, w:b0.s*.6, h:b0.s*.6};
-    return {x:rx + x0*kx, y:ry + y0*ky, w:(x1 - x0 + 1)*kx, h:(y1 - y0 + 1)*ky};
+    if (!best || y1 < y0 || x1 < x0) return null;             // nothing stands out: size unknown (never guess "close")
+    // lin = size from the blob's AREA: a thin pole under a sign hardly changes it, so distance stays honest
+    const bw = (x1 - x0 - 1)*kx, bh = (y1 - y0 - 1)*ky;     // (−2 px: undo the gap-closing growth)
+    return {x:rx + (x0 + 1)*kx, y:ry + (y0 + 1)*ky, w:Math.max(bw, kx), h:Math.max(bh, ky), lin:Math.max(kx, Math.min(bw, bh))};   // lin = the SHORT side: a pole under a sign doesn't count
   },
   confirmed(){ const t = this.track; return !!t && t.hits >= 2 && t.miss <= 1; },
   state(W, H){
@@ -2443,7 +2466,7 @@ const Tracker = {
     const near = (t.c.rule?.near || 0), size = Math.round(t.size*100);
     t.close = near <= 0 ? true : t.close ? size >= near - 4 : size >= near;     // small hysteresis: no flicker at the edge
     // show the box a bit tighter than the window (the sign sits in the middle of the matching window)
-    const o = t.obj || {x:t.box.x, y:t.box.y, w:t.box.s, h:t.box.s};
+    const o = t.obj || {x:t.box.x + t.box.s*.3, y:t.box.y + t.box.s*.3, w:t.box.s*.4, h:t.box.s*.4};
     return {c:t.c, p:t.p, size, near, close:t.close, ok:this.confirmed(),
             box:{x:o.x/W, y:o.y/H, w:o.w/W, h:o.h/H}};
   }
