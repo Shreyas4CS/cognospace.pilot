@@ -228,3 +228,25 @@
 @media (max-height:540px) and (orientation:landscape){
   .test-badge{bottom:8px;font-size:13px;padding:5px 12px 5px 7px}
 }
+
+/* ---- clean Live cockpit: bigger camera + controls, details on demand ---- */
+@media (max-width:1020px),(max-height:599px){
+  #app.live .stage{max-height:58vh}
+  .dock-r .icon-btn{width:46px !important;height:46px !important;border-radius:14px}
+  .dock-r .icon-btn svg{width:20px;height:20px}
+  .col-left .det-head{grid-column:1 / -1}
+}
+@media (max-width:640px){
+  .dock-btn{height:50px;padding:0 13px;border-radius:15px;gap:5px}
+  .dock-btn span{display:none}
+  .dock-btn .caret{font-size:10px}
+  .col-left .tile{flex-direction:row !important;align-items:center !important}
+}
+@media (orientation:landscape) and (max-height:540px){
+  .dock-btn{height:48px;padding:0 12px}
+  .dock-btn span{display:none}
+}
+@media (min-width:641px) and (max-width:1020px) and (min-height:541px){
+  .col-left .tiles{grid-template-columns:1fr !important}
+}
+#app.live .stage .gauge{display:none !important}   /* speed is already shown in the strip above the camera */
