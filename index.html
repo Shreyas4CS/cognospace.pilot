@@ -259,6 +259,13 @@ footer{border-top:1px solid var(--line);background:#ffffffcc;margin-top:30px}
 .tst-row.ok .st{background:var(--ok);border-color:var(--ok);color:#fff}
 .tst-row.now{box-shadow:0 0 0 2px var(--hl,#2f7bff) inset}
 .tst-row .warn{color:#b45309}
+.src-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.src-seg button{display:flex;align-items:center;gap:10px;text-align:left;padding:11px 12px;border-radius:14px;border:1.5px solid var(--line);background:#fff;transition:.15s;min-width:0}
+.src-seg button svg{width:20px;height:20px;flex:none;color:var(--muted)}
+.src-seg button span{min-width:0}.src-seg button b{display:block;font-size:13.5px}.src-seg button small{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-seg button.on{border-color:var(--teal,#00b8c4);background:linear-gradient(135deg,rgba(0,184,196,.08),rgba(47,123,255,.08))}
+.src-seg button.on svg{color:var(--teal,#00b8c4)}
+.src-seg button.dis{opacity:.55}
 .dist{border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px}
 .dist-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;margin-bottom:8px;gap:8px}
 .dist-h b{color:#b45309;font-size:13px;letter-spacing:0;text-align:right}.dist-h b.ok{color:var(--ok)}
@@ -985,6 +992,14 @@ select.txt{appearance:auto}
       </div>
 
       <div id="trainPanel">
+        <div class="card src-card" id="srcCard" hidden>
+          <h3><svg width="17" height="17"><use href="#i-cam"/></svg> Camera for training</h3>
+          <div class="src-seg">
+            <button data-src="local"><svg><use href="#i-laptop"/></svg><span><b>This device</b><small>Laptop webcam</small></span></button>
+            <button data-src="vehicle"><svg><use href="#i-phone"/></svg><span><b>Vehicle camera</b><small id="srcVehName">Connect a vehicle first</small></span></button>
+          </div>
+          <p class="sub" id="srcSub" style="margin:10px 0 0"></p>
+        </div>
         <div class="card">
           <div class="tabs" id="trainTabs">
             <button data-tab="objects" class="on"><svg width="15" height="15"><use href="#i-eye"/></svg>Objects</button>
@@ -1398,6 +1413,7 @@ Cam.setLens = async function(z){
 };
 Cam.label = function(){
   const tr = this.track(), el = $('#camLbl span'); if (!el) return;
+  if (typeof remoteView === 'function' && remoteView()){ el.textContent = S.remote?.cam?.off ? `${S.linkedName} camera off` : `${S.linkedName} camera`; return; }
   if (!tr){ el.textContent = 'Camera off'; return; }
   el.textContent = isMobile ? `${this.facing === 'user' ? 'Front' : 'Back'} · ${this.zoom}×` : (tr.label || 'Camera').replace(/\s*\(.*\)/, '').slice(0, 22) + (this.zoom !== 1 ? ` · ${this.zoom}×` : '');
 };
@@ -1419,6 +1435,7 @@ Cam.css = c => { const z = c.swz || 1; return `scale(${(c.mirror?-1:1)*(c.rot?-1
 Cam.apply = function(){ camEl.style.transform = Cam.css(this); LS.set('cam', {mirror:this.mirror, flipV:this.flipV, rot:this.rot}); renderCamTools(); };
 Cam.action = function(a, v){
   if (a === 'power') return this.power(!this.stream);
+  if (a === 'on') return this.stream ? null : this.power(true);
   if (a === 'switch') return this.stream ? this.switch() : this.power(true);
   if (a === 'lens') return this.setLens(+v);
   if (a === 'mirror') this.mirror = !this.mirror;
@@ -1443,6 +1460,12 @@ function grab(){
   const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null;
   const k = 384 / Math.min(vw, vh), W = Math.round(vw*k), H = Math.round(vh*k);
   drawT(pctx, proc, W, H); return proc;
+}
+const rproc = document.createElement('canvas'), rpctx = rproc.getContext('2d', {willReadFrequently:true});
+function grabRemote(){
+  const vw = remoteEl.videoWidth, vh = remoteEl.videoHeight; if (!vw || !remoteEl.srcObject) return null;
+  const k = 384 / Math.min(vw, vh); rproc.width = Math.round(vw*k); rproc.height = Math.round(vh*k);
+  rpctx.drawImage(remoteEl, 0, 0, rproc.width, rproc.height); return rproc;
 }
 function grabOCR(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null; drawT(octx, ocrCv, 960, Math.round(960*vh/vw)); return ocrCv; }
 function thumb(src){ const c = document.createElement('canvas'); c.width = c.height = 72; const s = Math.min(src.width, src.height); c.getContext('2d').drawImage(src, (src.width-s)/2, (src.height-s)/2, s, s, 0, 0, 72, 72); return c.toDataURL('image/jpeg', .6); }
@@ -1681,6 +1704,28 @@ const Engine = {
     };
   }
 };
+/* vehicle: record training samples with THIS camera for the Control Station */
+const VRec = {
+  timer:null, n:0,
+  start(id){
+    this.stop();
+    if (!Cam.stream){ Link.send({t:'recerr', msg:`${S.name}: camera is off. Turn it on first.`}); return; }
+    if (!AI.ready){ Link.send({t:'recerr', msg:`${S.name}: AI is still loading. Try again in a moment.`}); return; }
+    this.n = 0; toast(`Recording samples for ${S.linkedName || 'Control Station'}…`);
+    const until = Date.now() + 60000;                              // safety stop
+    this.timer = setInterval(() => {
+      if (!Link.linked || Date.now() > until){ this.stop(); return; }
+      const f = grab(); if (!f) return;
+      try {
+        const vs = [AI.embed(f)]; this.n++;
+        if (this.n % 2 === 0) vs.push(AI.embed(variation(f)));     // a slightly zoomed / tilted / relit copy too
+        Link.send({t:'smp', id, p:packVecs(vs), th:this.n % 5 === 1 ? thumb(f) : undefined});
+      } catch (e) { console.warn(e); }
+    }, 140);
+  },
+  stop(){ if (this.timer){ clearInterval(this.timer); this.timer = null; if (this.n) toast(`Sent ${this.n} frames to ${S.linkedName || 'Control Station'}`, 'ok'); } }
+};
+
 /* send a command: to the vehicle if linked as controller, else run locally */
 function cmd(c){ if (S.role === 'controller' && Link.linked) Link.send({t:'cmd', c}); else Engine.handle(c); }
 
@@ -1745,6 +1790,7 @@ const Link = {
       case 'ping': if (mine){ this.lastPing = Date.now(); conn.send({t:'pong'}); } break;
       case 'mode': if (mine) setMode(d.m, true); break;
       case 'cmd': if (mine) Engine.handle(d.c); break;
+      case 'rec': if (mine){ d.on ? VRec.start(d.id) : VRec.stop(); } break;
       case 'ds0': if (mine) this.rx = {id:d.id, n:d.n, parts:new Array(d.n), got:0}; break;
       case 'ds1': if (mine && this.rx?.id === d.id && this.rx.parts[d.i] == null){ this.rx.parts[d.i] = d.d; this.rx.got++; } break;
       case 'ds2':
@@ -1761,13 +1807,14 @@ const Link = {
       case 'end': if (mine){ conn.send({t:'ended'}); setTimeout(() => endSession({wipe:!!d.wipe, by:S.linkedName}), 150); } break;
     }
   },
+  /* (VRec below) */
   startCall(peerId){
     try { this.call?.close(); } catch {}
     if (!Cam.stream){ setTimeout(() => { if (this.linked) this.startCall(peerId); }, 1500); return; }
     this.call = this.peer.call(peerId, Cam.stream);
   },
   unlinkVehicle(msg){
-    const was = !!this.linked; this.linked = null; S.linkedName = '';
+    VRec.stop(); const was = !!this.linked; this.linked = null; S.linkedName = '';
     try { this.call?.close(); } catch {} this.call = null;
     if (Engine.ap) Engine.handle({k:'ap', on:false});
     if (was){ toast(msg, 'warn'); logEvent('system', msg); }
@@ -1828,6 +1875,15 @@ const Link = {
         remoteEl.style.transform = Cam.css(d.cam || {}); break;
       case 'ev': if (this.linked === e) logEvent(d.e.kind, d.e.text, {label:d.e.label, remote:true, t:d.e.t}); break;
       case 'test': if (this.linked === e){ S.ptest = d; renderPhoneTest(); } break;
+      case 'smp':                                               // samples recorded by the vehicle's camera
+        if (this.linked === e && rec?.remote && rec.id === d.id){
+          const c = Model.byId(d.id); if (!c) break;
+          for (const v of unpackVecs(d.p)) if (c.vecs.length < MAX_SAMPLES) c.vecs.push(v);
+          if (d.th && c.thumbs.length < 8) c.thumbs.push(d.th);
+          if (rec.cnt) rec.cnt.textContent = `${c.vecs.length} samples`;
+          if (c.vecs.length >= MAX_SAMPLES){ toast(`${c.name}: ${MAX_SAMPLES} samples reached`, 'ok'); stopRec(); }
+        } break;
+      case 'recerr': if (this.linked === e){ toast(d.msg, 'warn'); stopRec(); } break;
       case 'near': if (this.linked === e){ const c = Model.byId(d.id); if (c?.rule){ c.rule.near = d.v; Model.changed(); S.synced = Date.now(); renderRules(); toast(`${S.linkedName} set “${c.name}” to act at size ≥ ${d.v}%`, 'ok'); } } break;
       case 'dsok': S.synced = Date.now(); S.lastSent = Date.now(); toast(`Vehicle learned ${d.learned} objects`, 'ok'); renderSend(); break;
       case 'dserr': toast('Transfer failed. Please send again.', 'bad'); renderSend(); break;
@@ -1841,6 +1897,7 @@ const Link = {
   },
   release(silent){ if (!this.linked) return; this.send({t:'release'}); this.unlinkController(silent ? '' : 'Vehicle unlinked'); },
   unlinkController(msg){
+    if (rec?.remote) stopRec(); S.camSrc = 'local';
     this.linked = null; S.remote = null; S.linkedName = ''; S.ptest = null;
     try { this.call?.close(); } catch {} this.call = null; remoteEl.srcObject = null;
     if (msg){ toast(msg, 'warn'); logEvent('system', msg); }
@@ -2224,8 +2281,9 @@ const Tracker = {
     this.guess = guess;
     if (hits.length){
       const top = hits.reduce((a, h) => h.sc > a.sc ? h : a);
-      // the tightest window that still matches almost as well = a box that hugs the object (good for distance)
-      best = hits.filter(h => h.c === top.c && h.sc >= top.sc*.9).reduce((a, h) => h.box.s < a.box.s ? h : a);
+      // among windows that match about as well, take the LARGEST: it contains the whole object plus a
+      // little background around it, so the outline measurement below can find the real edges
+      best = hits.filter(h => h.c === top.c && h.sc >= top.sc*.92).reduce((a, h) => h.box.s > a.box.s ? h : a);
     }
     if (best){
       if (t && best.c === t.c){
@@ -2236,8 +2294,69 @@ const Tracker = {
       } else t.miss++;
     } else if (t){ t.miss++; if (t.miss >= 4) this.track = null; }
     const tr = this.track;
-    if (tr){ const sz = tr.box.s / m; tr.size = tr.size == null ? sz : tr.size*.6 + sz*.4; }
+    if (tr){
+      /* measure the REAL object inside the matched window: big on screen = close, small = far */
+      const o = this.measure(f, tr.box);
+      const sz = Math.max(o.w, o.h) / m;
+      tr.hist = tr.hits <= 1 || !tr.hist ? [sz] : [...tr.hist.slice(-4), sz];
+      tr.size = [...tr.hist].sort((a, b) => a - b)[tr.hist.length >> 1];
+      tr.obj = tr.obj && tr.hits > 1 ? {x:tr.obj.x + (o.x - tr.obj.x)*.5, y:tr.obj.y + (o.y - tr.obj.y)*.5, w:tr.obj.w + (o.w - tr.obj.w)*.5, h:tr.obj.h + (o.h - tr.obj.h)*.5} : o;
+      // keep the search window centred on the object so the tracker follows it as it moves
+      const cx = tr.obj.x + tr.obj.w/2, cy = tr.obj.y + tr.obj.h/2;
+      const fill = Math.max(o.w, o.h) / tr.box.s, ns = fill > .8 ? tr.box.s*1.25 : fill < .22 ? tr.box.s*.9 : tr.box.s;   // window follows the object's size
+      tr.box = this.fit({x:cx - ns/2, y:cy - ns/2, s:ns}, W, H);
+    }
     return this.state(W, H);
+  },
+  /* Find the object's own outline inside window b: pixels that clearly differ from the window's
+     border colour (the floor / wall around the sign). Returns a box in frame pixels. */
+  mc:null, mx:null,
+  measure(f, b0){
+    const N = 48;
+    if (!this.mc){ this.mc = document.createElement('canvas'); this.mc.width = this.mc.height = N; this.mx = this.mc.getContext('2d', {willReadFrequently:true}); }
+    // look a bit wider than the window, so the border ring is (mostly) the background around the object
+    const W = f.width, H = f.height, cx = b0.x + b0.s/2, cy = b0.y + b0.s/2, e = Math.min(b0.s*1.45, Math.max(W, H));
+    const rx = clamp(cx - e/2, 0, Math.max(0, W - e)), ry = clamp(cy - e/2, 0, Math.max(0, H - e)), rw = Math.min(e, W), rh = Math.min(e, H);
+    this.mx.drawImage(f, rx, ry, rw, rh, 0, 0, N, N);
+    const d = this.mx.getImageData(0, 0, N, N).data;
+    // border colour = average of the outer ring
+    let r = 0, g = 0, bl = 0, n = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){
+      if (x > 2 && x < N - 3 && y > 2 && y < N - 3) continue;
+      const i = (y*N + x)*4; r += d[i]; g += d[i + 1]; bl += d[i + 2]; n++;
+    }
+    r /= n; g /= n; bl /= n;
+    let v = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){
+      if (x > 2 && x < N - 3 && y > 2 && y < N - 3) continue;
+      const i = (y*N + x)*4; v += (d[i] - r)**2 + (d[i + 1] - g)**2 + (d[i + 2] - bl)**2;
+    }
+    const T = Math.max(55, Math.sqrt(v/n)*2.2);
+    const mask = new Uint8Array(N*N);
+    for (let j = 0; j < N*N; j++){ const i = j*4; if ((d[i] - r)**2 + (d[i + 1] - g)**2 + (d[i + 2] - bl)**2 > T*T) mask[j] = 1; }
+    // keep only the blob nearest the centre (ignores clutter at the edges of the view)
+    const lab = new Int16Array(N*N), q = new Int32Array(N*N); let best = null, nl = 0;
+    for (let j = 0; j < N*N; j++){
+      if (!mask[j] || lab[j]) continue;
+      nl++; let h = 0, t = 0, cnt = 0, X0 = N, X1 = 0, Y0 = N, Y1 = 0, sx = 0, sy = 0; q[t++] = j; lab[j] = nl;
+      while (h < t){
+        const k = q[h++], x = k % N, y = (k / N) | 0; cnt++; sx += x; sy += y;
+        if (x < X0) X0 = x; if (x > X1) X1 = x; if (y < Y0) Y0 = y; if (y > Y1) Y1 = y;
+        for (const nb of [k - 1, k + 1, k - N, k + N]){
+          if (nb < 0 || nb >= N*N || lab[nb] || !mask[nb]) continue;
+          if ((nb === k - 1 && x === 0) || (nb === k + 1 && x === N - 1)) continue;
+          lab[nb] = nl; q[t++] = nb;
+        }
+      }
+      if (cnt < 6) continue;
+      const dc = Math.hypot(sx/cnt - N/2, sy/cnt - N/2) / N, score = cnt * (1.2 - Math.min(1, dc*1.6));
+      if (!best || score > best.score) best = {score, cnt, X0, X1, Y0, Y1};
+    }
+    const kx = rw/N, ky = rh/N;
+    const x0 = best?.X0, x1 = best?.X1, y0 = best?.Y0, y1 = best?.Y1;
+    if (!best || best.cnt < N*N*.02 || y1 <= y0 || x1 <= x0)   // nothing stands out: assume the sign fills ~60% of the window
+      return {x:b0.x + b0.s*.2, y:b0.y + b0.s*.2, w:b0.s*.6, h:b0.s*.6};
+    return {x:rx + x0*kx, y:ry + y0*ky, w:(x1 - x0 + 1)*kx, h:(y1 - y0 + 1)*ky};
   },
   confirmed(){ const t = this.track; return !!t && t.hits >= 2 && t.miss <= 1; },
   state(W, H){
@@ -2245,9 +2364,9 @@ const Tracker = {
     const near = (t.c.rule?.near || 0), size = Math.round(t.size*100);
     t.close = near <= 0 ? true : t.close ? size >= near - 4 : size >= near;     // small hysteresis: no flicker at the edge
     // show the box a bit tighter than the window (the sign sits in the middle of the matching window)
-    const k = .78, s2 = t.box.s*k, bx = t.box.x + (t.box.s - s2)/2, by = t.box.y + (t.box.s - s2)/2;
+    const o = t.obj || {x:t.box.x, y:t.box.y, w:t.box.s, h:t.box.s};
     return {c:t.c, p:t.p, size, near, close:t.close, ok:this.confirmed(),
-            box:{x:bx/W, y:by/H, w:s2/W, h:s2/H}};
+            box:{x:o.x/W, y:o.y/H, w:o.w/W, h:o.h/H}};
   }
 };
 
@@ -2262,9 +2381,9 @@ const Test = {
     if (!Cam.stream){ await Cam.power(true); if (!Cam.stream) return; }
     if (!AI.ready) toast('AI is still loading. The test starts as soon as it is ready.');
     this.on = true; this.cur = null; this.streak = {id:null, n:0}; Tracker.reset();
-    logEvent('system', 'Training test started'); this.render(); this.report(true);
+    logEvent('system', 'Training test started'); this.render(); updateStage(); this.report(true);
   },
-  stop(){ if (!this.on) return; this.on = false; this.cur = null; this.render(); this.report(true); },
+  stop(){ if (!this.on) return; this.on = false; this.cur = null; this.render(); updateStage(); this.report(true); },
   reset(){ this.res = {}; this.streak = {id:null, n:0}; this.render(); this.report(true); },
   step(st){
     this.cur = st && st.ok ? st : null;
@@ -2471,7 +2590,10 @@ function renderSetup(){
   $('#ckLink').classList.toggle('done', !!Link.linked);
   $('#ckLinkTxt').textContent = Link.linked ? `Linked to ${S.linkedName}` : `Waiting for Control Station · fleet “${Link.room()}”`;
 }
-function camView(){ return (S.role === 'controller' && Link.linked && S.mode === 'live') ? (S.remote?.cam || {off:true}) : Cam.info(); }
+/* Control Station can train with the VEHICLE's camera (same camera that drives = best results) */
+function vehCam(){ return S.role === 'controller' && !!Link.linked && S.camSrc === 'vehicle'; }
+function remoteView(){ return S.role === 'controller' && !!Link.linked && (S.mode === 'live' || S.camSrc === 'vehicle'); }
+function camView(){ return remoteView() ? (S.remote?.cam || {off:true}) : Cam.info(); }
 function renderCamTools(){
   const c = camView(), off = !!c.off;
   $$('[data-cam]').forEach(b => {
@@ -2486,10 +2608,10 @@ function renderCamTools(){
 }
 function updateStage(){
   if (!S.role) return;
-  const remote = S.role === 'controller' && Link.linked && S.mode === 'live';
+  const remote = remoteView();
   camEl.hidden = remote; remoteEl.hidden = !remote;
   const empty = $('#stageEmpty');
-  if (remote && S.remote?.cam?.off){ empty.hidden = false; $('#emptyT').textContent = 'Vehicle camera is off'; $('#emptyP').textContent = `${S.linkedName}'s camera was turned off. Autopilot can't run without it.`; $('#emptyBtn').hidden = false; }
+  if (remote && S.remote?.cam?.off){ empty.hidden = false; $('#emptyT').textContent = 'Vehicle camera is off'; $('#emptyP').textContent = S.mode === 'live' ? `${S.linkedName}'s camera was turned off. Autopilot can't run without it.` : `Turn on ${S.linkedName}'s camera to train with it.`; $('#emptyBtn').hidden = false; }
   else if (remote && !remoteEl.srcObject){ empty.hidden = false; $('#emptyT').textContent = 'Waiting for vehicle camera…'; $('#emptyP').textContent = `Connecting to ${S.linkedName}'s live view.`; $('#emptyBtn').hidden = true; }
   else if (!remote && !Cam.stream){ empty.hidden = false; $('#emptyT').textContent = 'Camera is off'; $('#emptyP').textContent = S.mode === 'live' ? 'Autopilot needs the camera. Turn it on to drive.' : 'Turn it on to train objects.'; $('#emptyBtn').hidden = false; }
   else empty.hidden = true;
@@ -2499,10 +2621,32 @@ function updateStage(){
   $('#ctrlBanner').hidden = !vehLinked; $('#ctrlTxt').textContent = `Controlled by ${S.linkedName}`;
   $('#bleGate').hidden = !(S.role === 'vehicle' && S.mode === 'live' && !BLE.connected && !S.previewNoCar);
   $('#fpsStat').hidden = S.mode !== 'live';
-  renderCamTools();
+  renderCamTools(); Cam.label();
+}
+function renderSrc(){
+  const card = $('#srcCard'); if (!card) return;
+  card.hidden = S.role !== 'controller';
+  if (S.camSrc === 'vehicle' && !Link.linked) S.camSrc = 'local';
+  $$('#srcCard [data-src]').forEach(b => { b.classList.toggle('on', b.dataset.src === (S.camSrc || 'local')); b.classList.toggle('dis', b.dataset.src === 'vehicle' && !Link.linked); });
+  $('#srcVehName').textContent = Link.linked ? `${S.linkedName}'s camera` : 'Connect a vehicle first';
+  $('#srcSub').innerHTML = vehCam()
+    ? `<b style="color:var(--ink)">Best results:</b> recording uses the camera that will drive. Record each sign from far, middle and close, and record the empty track for “Clear road”.`
+    : Link.linked ? `Tip: switch to <b>Vehicle camera</b> so the AI learns from the same camera that drives.` : `Connect the vehicle (top right) to train with its camera. That gives the best results.`;
+}
+function setSrc(src){
+  if (src === 'vehicle' && !Link.linked){ toast('Connect a vehicle first to use its camera', 'warn'); openDrawer(); return; }
+  if (rec) stopRec();
+  S.camSrc = src;
+  if (src === 'vehicle'){
+    if (Cam.stream) Cam.power(false);                                  // laptop webcam not needed
+    Link.send({t:'cmd', c:{k:'cam', a:'on'}});                          // wake the phone's camera
+    toast(`Training with ${S.linkedName}'s camera`, 'ok');
+  }
+  renderAll();
 }
 function renderAll(){
   if (!S.role) return;
+  Cam.label();
   $('#roleTag').textContent = S.role === 'vehicle' ? 'Vehicle' : 'Control Station';
   $$('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
   const locked = S.role === 'vehicle' && !!Link.linked;
@@ -2516,7 +2660,7 @@ function renderAll(){
   $('#ltTitle').textContent = `Linked to ${S.linkedName || 'Control Station'}`;
   $('#ltObjs').textContent = Model.learned(); $('#ltSamples').textContent = Model.total(); $('#ltWhen').textContent = ago(S.synced);
   $('#liveHint').hidden = S.role !== 'controller' || isMobile;
-  updateLinkPill(); renderBle(); renderSetup(); updateStage(); renderClasses(); renderRules(); renderSend(); renderSettings(); renderDrawer(); renderLog(); Test.render(); renderPhoneTest();
+  updateLinkPill(); renderBle(); renderSetup(); updateStage(); renderClasses(); renderRules(); renderSend(); renderSettings(); renderDrawer(); renderLog(); Test.render(); renderPhoneTest(); renderSrc();
 }
 
 /* ---------- train: object list ---------- */
@@ -2548,10 +2692,17 @@ function addClass(){
   toast(`Added “${name}”. Hold record while showing it to the camera. Rule: ${describeRule(c.rule)}`);
 }
 function startRec(id, btn){
-  if (!AI.ready){ toast('AI is still loading. One moment…', 'warn'); return; }
-  if (!Cam.stream){ toast('Turn on the camera first', 'warn'); return; }
   const c = Model.byId(id); if (!c) return;
   if (c.vecs.length >= MAX_SAMPLES){ toast(`Max ${MAX_SAMPLES} samples per object`, 'warn'); return; }
+  if (vehCam()){                                                    // the PHONE records with its own camera and sends samples here
+    if (S.remote?.cam?.off){ toast(`Turn on ${S.linkedName}'s camera first`, 'warn'); return; }
+    btn.classList.add('on'); btn.querySelector('span').textContent = 'Recording on vehicle…';
+    rec = {id, btn, remote:true, cnt:btn.closest('.cls').querySelector('[data-count]'), timer:null};
+    Link.send({t:'rec', on:true, id});
+    return;
+  }
+  if (!AI.ready){ toast('AI is still loading. One moment…', 'warn'); return; }
+  if (!Cam.stream){ toast('Turn on the camera first', 'warn'); return; }
   btn.classList.add('on'); btn.querySelector('span').textContent = 'Recording…';
   const cnt = btn.closest('.cls').querySelector('[data-count]');
   rec = {id, btn, timer:setInterval(() => {
@@ -2563,7 +2714,9 @@ function startRec(id, btn){
   }, 110)};
 }
 function stopRec(){
-  if (!rec) return; clearInterval(rec.timer); rec = null;
+  if (!rec) return; clearInterval(rec.timer);
+  if (rec.remote) Link.send({t:'rec', on:false});
+  rec = null;
   Model.changed(); renderClasses(); renderRules(); renderSend();
 }
 
@@ -2664,7 +2817,7 @@ function renderLive(st){
   const bl = $('#spBle'), car = st?.ble; bl.className = 'sp-corner l ' + (car ? 'good' : 'bad'); bl.lastElementChild.textContent = car ? 'CAR' : 'NO CAR';
   $('#spAi').lastElementChild.textContent = `${st?.fps || 0} FPS`;
   $('#signChip').innerHTML = st?.custom ? `<div class="sign-chip${st.custom.close ? '' : ' guess'}"><span class="sw" style="background:${st.custom.color}"></span><span>${esc(st.custom.name)} · ${st.custom.close ? st.custom.p + '%' : 'far'}<small>${st.custom.close ? esc(st.custom.rule) : `Size ${st.custom.size}% · acts at ${st.custom.near}%`}</small></span></div>`
-    : st?.guess ? `<div class="sign-chip guess"><span class="sw" style="background:${st.guess.color}"></span><span>${esc(st.guess.name)}? ${st.guess.p}%<small>Needs ${st.guess.need}% to act. Move closer</small></span></div>` : '';
+    : st?.guess ? `<div class="sign-chip guess"><span class="sw" style="background:${st.guess.color}"></span><span>${esc(st.guess.name)}? ${st.guess.p}%<small>${st.guess.p >= st.guess.need ? 'Locking on…' : `Needs ${st.guess.need}% to act. Move closer`}</small></span></div>` : '';
   const oc = $('#ocrChip'); oc.hidden = !st?.ocr; oc.textContent = st?.ocr ? 'Text: ' + st.ocr : '';
   $('#fpsStat').textContent = (st?.fps || 0) + ' fps';
   const apb = $('#apBtn');
@@ -2783,7 +2936,7 @@ async function trainLoop(){
   while (true){
     await sleep(200);
     if (!S.role || S.mode !== 'train' || rec || !AI.ready || Test.on || (S.role === 'vehicle' && Link.linked)) continue;
-    const f = grab(); if (!f) continue;
+    const f = vehCam() ? grabRemote() : grab(); if (!f) continue;
     let r; try { r = Model.predict(AI.embed(f)); } catch { continue; }
     if (!r){ $('#predTop').textContent = '–'; $('#predBars').innerHTML = '<div class="empty" style="padding:6px">Add objects and record samples to see predictions here.</div>'; continue; }
     const t = r.top, sure = t.sim >= .5;
@@ -2851,22 +3004,23 @@ $('#ckCamBtn').onclick = () => Cam.power(true);
 $('#testBtn').onclick = () => Test.start();
 $('#testStop').onclick = () => Test.stop();
 $('#testReset').onclick = () => Test.reset();
+$$('#srcCard [data-src]').forEach(b => b.onclick = () => setSrc(b.dataset.src));
 $('#testList').addEventListener('click', e => { const b = e.target.closest('[data-near]'); if (b) Test.setNear(b.dataset.near); });
 $('#gatePair').onclick = () => BLE.pair();
 $('#gateSkip').onclick = () => { S.previewNoCar = true; updateStage(); };
-$('#emptyBtn').onclick = () => (S.role === 'controller' && Link.linked && S.mode === 'live') ? Link.send({t:'cmd', c:{k:'cam', a:'power'}}) : Cam.power(true);
+$('#emptyBtn').onclick = () => remoteView() ? Link.send({t:'cmd', c:{k:'cam', a:'on'}}) : Cam.power(true);
 $('#unlinkBtn').onclick = () => { Link.send({t:'bye'}); try { Link.linked?.close(); } catch {} Link.unlinkVehicle('Unlinked'); };
 $('#endBtn').onclick = () => openEnd(false); $('#homeBtn').onclick = () => endSession({home:true}); $('#endCancel').onclick = () => $('#endModal').hidden = true;
 $('#endConfirm').onclick = () => endSession({wipe:$('#wipeChk').checked, alsoRemote:!$('#endRemoteRow').hidden && $('#endRemote').checked});
 $('#logDl').onclick = downloadLog;
 $$('[data-cam]').forEach(b => b.onclick = () => {
   const a = b.dataset.cam;
-  if (S.role === 'controller' && Link.linked && S.mode === 'live') Link.send({t:'cmd', c:{k:'cam', a}}); else Cam.action(a);
+  if (remoteView()) Link.send({t:'cmd', c:{k:'cam', a}}); else Cam.action(a);
 });
 $('#zoomSeg').addEventListener('click', e => {
   const b = e.target.closest('[data-lens]'); if (!b) return;
   const v = +b.dataset.lens;
-  if (S.role === 'controller' && Link.linked && S.mode === 'live') Link.send({t:'cmd', c:{k:'cam', a:'lens', v}}); else Cam.setLens(v);
+  if (remoteView()) Link.send({t:'cmd', c:{k:'cam', a:'lens', v}}); else Cam.setLens(v);
 });
 $('#drBody').addEventListener('click', e => {
   const c = e.target.closest('[data-claim]'); if (c) return Link.claim(+c.dataset.claim);
