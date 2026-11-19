@@ -1498,6 +1498,21 @@ function grabRemote(){
   rpctx.drawImage(remoteEl, 0, 0, rproc.width, rproc.height); return rproc;
 }
 function grabOCR(){ const vw = camEl.videoWidth, vh = camEl.videoHeight; if (!vw || !Cam.stream) return null; drawT(octx, ocrCv, 960, Math.round(960*vh/vw)); return ocrCv; }
+/* Training learns the OBJECT, not the room around it: find the sign in the middle of the picture,
+   cut it out tight, and give only that to KNN. Clutter in the background then never looks like a sign. */
+const Crop = {
+  box(f){
+    const W = f.width, H = f.height, m = Math.min(W, H), b0 = {x:(W - m*.7)/2, y:(H - m*.7)/2, s:m*.7};
+    const o = Tracker.measure(f, b0), cx = o.x + o.w/2, cy = o.y + o.h/2;
+    const sz = clamp(Math.max(o.w, o.h)*1.15, m*.22, m);
+    return Tracker.fit({x:cx - sz/2, y:cy - sz/2, s:sz}, W, H);
+  },
+  sample(f, bg){ if (bg) return {v:AI.embed(f), b:null}; const b = this.box(f); return {v:AI.embedBox(f, b), b}; },
+  thumb(f, b){
+    if (!b) return thumb(f);
+    const c = document.createElement('canvas'); c.width = c.height = 72; c.getContext('2d').drawImage(f, b.x, b.y, b.s, b.s, 0, 0, 72, 72); return c.toDataURL('image/jpeg', .6);
+  }
+};
 function thumb(src){ const c = document.createElement('canvas'); c.width = c.height = 72; const s = Math.min(src.width, src.height); c.getContext('2d').drawImage(src, (src.width-s)/2, (src.height-s)/2, s, s, 0, 0, 72, 72); return c.toDataURL('image/jpeg', .6); }
 
 /* =====================================================================
@@ -1738,7 +1753,7 @@ const Engine = {
 /* vehicle: record training samples with THIS camera for the Control Station */
 const VRec = {
   timer:null, n:0,
-  start(id){
+  start(id, bg=false){
     this.stop();
     if (!Cam.stream){ Link.send({t:'recerr', msg:`${S.name}: camera is off. Turn it on first.`}); return; }
     if (!AI.ready){ Link.send({t:'recerr', msg:`${S.name}: AI is still loading. Try again in a moment.`}); return; }
@@ -1748,9 +1763,9 @@ const VRec = {
       if (!Link.linked || Date.now() > until){ this.stop(); return; }
       const f = grab(); if (!f) return;
       try {
-        const vs = [AI.embed(f)]; this.n++;
-        if (this.n % 2 === 0) vs.push(AI.embed(variation(f)));     // a slightly zoomed / tilted / relit copy too
-        Link.send({t:'smp', id, p:packVecs(vs), th:this.n % 5 === 1 ? thumb(f) : undefined});
+        const a = Crop.sample(f, bg), vs = [a.v]; this.n++;
+        if (this.n % 2 === 0) vs.push(Crop.sample(variation(f), bg).v);   // a slightly zoomed / tilted / relit copy too
+        Link.send({t:'smp', id, p:packVecs(vs), th:this.n % 5 === 1 ? Crop.thumb(f, a.b) : undefined});
       } catch (e) { console.warn(e); }
     }, 140);
   },
@@ -1852,7 +1867,7 @@ const Link = {
       case 'ping': if (mine){ this.lastPing = Date.now(); conn.send({t:'pong'}); } break;
       case 'mode': if (mine) setMode(d.m, true); break;
       case 'cmd': if (mine) Engine.handle(d.c); break;
-      case 'rec': if (mine){ d.on ? VRec.start(d.id) : VRec.stop(); } break;
+      case 'rec': if (mine){ d.on ? VRec.start(d.id, d.bg) : VRec.stop(); } break;
       case 'ds0': if (mine) this.rx = {id:d.id, n:d.n, parts:new Array(d.n), got:0}; break;
       case 'ds1': if (mine && this.rx?.id === d.id && this.rx.parts[d.i] == null){ this.rx.parts[d.i] = d.d; this.rx.got++; } break;
       case 'ds2':
@@ -2259,8 +2274,9 @@ const Upload = {
         try {
           const cv = await imageToCanvas(await it.get());
           c.vecs.push(AI.embed(cv)); added++; used.add(c.name);
+          if (!c.bg && c.vecs.length < MAX_SAMPLES){ c.vecs.push(Crop.sample(cv, false).v); added++; }
           if (c.thumbs.length < 8 && (c.vecs.length % 4 === 1 || c.thumbs.length < 2)) c.thumbs.push(thumb(cv));
-          for (let k = 0; k < extra && c.vecs.length < MAX_SAMPLES; k++){ c.vecs.push(AI.embed(variation(cv))); added++; }
+          for (let k = 0; k < extra && c.vecs.length < MAX_SAMPLES; k++){ c.vecs.push(Crop.sample(variation(cv), c.bg).v); added++; }
         } catch (e) { bad++; }
         prog.firstElementChild.style.width = Math.round((i + 1)/items.length*100) + '%';
         if (i % 2 === 0){ st.textContent = `Learning ${i + 1} of ${items.length}…`; await sleep(0); }
@@ -2765,7 +2781,7 @@ function startRec(id, btn){
     if (S.remote?.cam?.off){ toast(`Turn on ${S.linkedName}'s camera first`, 'warn'); return; }
     btn.classList.add('on'); btn.querySelector('span').textContent = 'Recording on vehicle…';
     rec = {id, btn, remote:true, cnt:btn.closest('.cls').querySelector('[data-count]'), timer:null};
-    Link.send({t:'rec', on:true, id});
+    Link.send({t:'rec', on:true, id, bg:!!c.bg});
     return;
   }
   if (!AI.ready){ toast('AI is still loading. One moment…', 'warn'); return; }
@@ -2774,8 +2790,8 @@ function startRec(id, btn){
   const cnt = btn.closest('.cls').querySelector('[data-count]');
   rec = {id, btn, timer:setInterval(() => {
     const f = grab(); if (!f) return;
-    try { c.vecs.push(AI.embed(f)); } catch (e) { console.warn(e); return; }
-    if (c.thumbs.length < 8 && c.vecs.length % 5 === 1) c.thumbs.push(thumb(f));
+    let smp; try { smp = Crop.sample(f, c.bg); c.vecs.push(smp.v); } catch (e) { console.warn(e); return; }
+    if (c.thumbs.length < 8 && c.vecs.length % 5 === 1) c.thumbs.push(Crop.thumb(f, smp.b));
     cnt.textContent = `${c.vecs.length} samples`;
     if (c.vecs.length >= MAX_SAMPLES) stopRec();
   }, 110)};
@@ -3004,7 +3020,7 @@ async function trainLoop(){
     await sleep(200);
     if (!S.role || S.mode !== 'train' || rec || !AI.ready || Test.on || (S.role === 'vehicle' && Link.linked)) continue;
     const f = vehCam() ? grabRemote() : grab(); if (!f) continue;
-    let r; try { r = Model.predict(AI.embed(f)); } catch { continue; }
+    let r; try { r = Model.predict(Crop.sample(f, false).v); } catch { continue; }   // same view as training: the object in the middle
     if (!r){ $('#predTop').textContent = '–'; $('#predBars').innerHTML = '<div class="empty" style="padding:6px">Add objects and record samples to see predictions here.</div>'; continue; }
     const t = r.top, sure = t.sim >= .5;
     $('#predTop').innerHTML = !sure ? '<span class="muted">Not sure</span>' : t.c.bg ? 'Road clear' : `<span style="color:${t.c.color}">${esc(t.c.name)}</span>`;
