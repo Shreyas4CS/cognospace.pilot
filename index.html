@@ -266,6 +266,7 @@ footer{border-top:1px solid var(--line);background:#ffffffcc;margin-top:30px}
 .src-seg button.on{border-color:var(--teal,#00b8c4);background:linear-gradient(135deg,rgba(0,184,196,.08),rgba(47,123,255,.08))}
 .src-seg button.on svg{color:var(--teal,#00b8c4)}
 .src-seg button.dis{opacity:.55}
+.fix-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fix-acts .btn{height:42px;font-size:13px;gap:6px;padding:0 10px}.fix-acts svg{width:16px;height:16px}
 .dist{border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 12px}
 .dist-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;margin-bottom:8px;gap:8px}
 .dist-h b{color:#b45309;font-size:13px;letter-spacing:0;text-align:right}.dist-h b.ok{color:var(--ok)}
@@ -875,6 +876,15 @@ select.txt{appearance:auto}
       <div class="tiles" id="liveTiles">
         <label class="tile" id="tileOcr"><input type="checkbox" id="tOcr"><span class="ti"><svg><use href="#i-text"/></svg></span><span><b>Read sign text</b><small>Matches saved words</small></span></label>
       </div>
+      <div class="card fix-card">
+        <div class="card-h"><b>Fix mistakes</b></div>
+        <p class="sub" style="margin:0 0 10px">Car reacting to the wrong thing? Point the camera at it and teach it.</p>
+        <div class="fix-acts">
+          <button class="btn soft" id="negWrong"><svg><use href="#i-ban"/></svg>Wrong detection</button>
+          <button class="btn soft" id="negView"><svg><use href="#i-eye"/></svg>Teach empty view</button>
+        </div>
+        <p class="hint" style="margin:8px 0 0;font-size:12px;color:var(--muted)">Adds what the camera sees now to “Clear road”, so it is ignored from now on.</p>
+      </div>
       <div class="card">
         <div class="card-h"><b>Road events</b><span class="live-tag">LIVE</span></div>
         <div class="ev-list" id="roadEv"></div>
@@ -994,6 +1004,7 @@ select.txt{appearance:auto}
           <div id="testBars"></div>
           <div class="tst-sum"><span>RESULTS</span><b id="testScore">0 / 0 recognised</b></div>
           <div id="testList"></div>
+          <div class="tst-acts"><button class="btn soft" id="testWrong">Wrong detection</button><button class="btn soft" id="testView">Teach empty view</button></div>
           <div class="tst-acts"><button class="btn soft" id="testReset">Reset results</button><button class="btn ghost" id="testStop">Stop test</button></div>
         </div>
       </div>
@@ -1216,7 +1227,7 @@ const camEl = $('#cam'), remoteEl = $('#remote'), overlay = $('#overlay'), stage
    ===================================================================== */
 function defaultRule(name){
   const n = name.toLowerCase();
-  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:60, near:0, lcd:(lcd || name).toUpperCase().slice(0, 20)});
+  const R = (action, value, hold, lcd) => ({action, value, hold, minConf:60, near:30, lcd:(lcd || name).toUpperCase().slice(0, 20)});
   if (/school|child|kid/.test(n)) return R('limit', 40, 6, 'SCHOOL ZONE - SLOW');
   if (/zebra|crossing|pedestrian|walk/.test(n)) return R('stopgo', 3, 0, 'ZEBRA CROSSING');
   if (/person/.test(n)) return R('stop', 0, 1, 'PERSON AHEAD');
@@ -1265,14 +1276,14 @@ const Model = {
   },
   remove(id){ this.classes = this.classes.filter(c => c.id !== id); this.changed(); },
   toJSON(maxThumbs=8){
-    return {v:1, sq:this.sq ? 1 : 0, at:this.updatedAt || Date.now(), builtin:this.builtin, idle:this.idle,
+    return {v:1, nv:2, sq:this.sq ? 1 : 0, at:this.updatedAt || Date.now(), builtin:this.builtin, idle:this.idle,
       classes:this.classes.map(c => ({id:c.id, name:c.name, bg:c.bg, color:c.color, keywords:c.keywords, rule:c.rule, thumbs:c.thumbs.slice(0, maxThumbs), vecs:packVecs(c.vecs)}))};
   },
   load(j){
     if (!j || !Array.isArray(j.classes)) return false;
     this.classes = j.classes.map(c => ({...c, keywords:c.keywords || '', thumbs:c.thumbs || [], vecs:unpackVecs(c.vecs)}));
     this.builtin = j.builtin || {}; this.updatedAt = j.at || Date.now(); this.ema.clear(); this.sq = !!j.sq || !this.classes.some(c => c.vecs?.length);
-    const fix = r => { if (!r) return; if (r.minConf == null || r.minConf === 70) r.minConf = 60; if (r.near == null) r.near = 0; };   // old default 70 was too strict; near = act-distance (0 = any)
+    const fix = r => { if (!r) return; if (r.minConf == null || r.minConf === 70) r.minConf = 60; if (r.near == null || (!j.nv && !r.near)) r.near = 30; };   // nv: from now on 30% (fairly close) is the default   // old default 70 was too strict; near = act-distance (0 = any)
     this.idle = j.idle && j.idle.action ? {...j.idle} : {action:'cruise', value:60};
     this.classes.forEach(c => fix(c.rule)); Object.values(this.builtin).forEach(fix);
     if (!this.classes.some(c => c.bg)) this.classes.unshift({id:uid(), name:'Clear road', bg:true, color:'#94a3b8', keywords:'', rule:null, vecs:[], thumbs:[]});
@@ -1282,9 +1293,10 @@ const Model = {
   changed(){ if (!this.total()) this.sq = true; this.updatedAt = Date.now(); this.save(); renderSend(); },
   reset(){ this.classes = []; this.builtin = {}; this.idle = {action:'cruise', value:60}; this.sq = true; this.add('Clear road', true); },
   predict(v){
-    const K = 7, top = [];
+    const K = 7, top = [], mx = new Array(this.classes.length).fill(-1);
     this.classes.forEach((c, ci) => { for (const s of c.vecs){
       let d = 0; for (let j = 0; j < v.length; j++) d += v[j]*s[j];
+      if (d > mx[ci]) mx[ci] = d;
       if (top.length < K) { top.push({d, ci}); top.sort((a, b) => b.d - a.d); }
       else if (d > top[K-1].d) { top[K-1] = {d, ci}; top.sort((a, b) => b.d - a.d); }
     }});
@@ -1292,8 +1304,9 @@ const Model = {
     const score = new Array(this.classes.length).fill(0), best = new Array(this.classes.length).fill(-1); let tot = 0;
     const d0 = top[0].d;
     for (const t of top){ const w = Math.exp(12*(t.d - d0)); score[t.ci] += w; tot += w; best[t.ci] = Math.max(best[t.ci], t.d); }
-    const list = this.classes.map((c, ci) => ({c, p:score[ci]/tot, sim:best[ci]})).sort((a, b) => b.p - a.p);
-    return {list, top:list[0]};
+    const list = this.classes.map((c, ci) => ({c, p:score[ci]/tot, sim:best[ci], mx:mx[ci]})).sort((a, b) => b.p - a.p);
+    const bi = this.classes.findIndex(c => c.bg);
+    return {list, top:list[0], bgMx: bi >= 0 && this.classes[bi].vecs.length ? mx[bi] : 0};
   },
   /* one decision used by BOTH the Train test and Live driving, so a passed test means it will act on the road */
   need(c){ return (c?.rule?.minConf ?? 60) / 100; },
@@ -1704,6 +1717,7 @@ const Engine = {
       this.manual = c.end ? null : {x:clamp(c.x, -100, 100), y:clamp(c.y, -100, 100), until:Date.now() + 450};
       if (!c.end) this.estop = false;
     } else if (c.k === 'cam'){ Cam.action(c.a, c.v); }
+    else if (c.k === 'neg'){ Neg.capture(c.kind); }
   },
   snapshot(){
     const act = this.active(), now = Date.now();
@@ -1742,6 +1756,37 @@ const VRec = {
   },
   stop(){ if (this.timer){ clearInterval(this.timer); this.timer = null; if (this.n) toast(`Sent ${this.n} frames to ${S.linkedName || 'Control Station'}`, 'ok'); } }
 };
+
+/* teach "this is NOT a sign": add what the camera sees to Clear road (runs on the device with the camera) */
+const Neg = {
+  capture(kind){
+    if (!AI.ready || !Cam.stream){ toast('Camera and AI must be on', 'warn'); return; }
+    const f = grab(); if (!f) return;
+    const W = f.width, H = f.height, m = Math.min(W, H), boxes = [], t = Tracker.track;
+    if (kind === 'wrong' && t){
+      const b = t.box;
+      for (const [dx, dy, ds] of [[0, 0, 1], [-.12, 0, 1], [.12, 0, 1], [0, -.12, 1], [0, .12, 1], [0, 0, .8], [0, 0, 1.25]]){
+        const sz = b.s*ds; boxes.push(Tracker.fit({x:b.x + b.s/2 + dx*b.s - sz/2, y:b.y + b.s/2 + dy*b.s - sz/2, s:sz}, W, H));
+      }
+    } else {
+      boxes.push({x:(W - m)/2, y:(H - m)/2, s:m});
+      const G = Tracker.grid(W, H); for (let i = 0; i < G.length; i += Math.max(1, Math.floor(G.length/14))) boxes.push(G[i]);
+    }
+    const vs = boxes.map(b => AI.embedBox(f, b));
+    const name = kind === 'wrong' && t ? t.c.name : '';
+    this.add(vs);
+    Tracker.reset(); Engine.effects?.clear?.(); Engine.streak?.clear?.();
+    if (S.role === 'vehicle' && Link.linked) Link.send({t:'neg', p:packVecs(vs), name});
+    toast(kind === 'wrong' ? (name ? `Got it: that was not “${name}”` : 'Got it: this view is ignored now') : 'This view is now learned as Clear road', 'ok');
+    logEvent('system', kind === 'wrong' ? `Taught: not ${name || 'a sign'}` : 'Taught empty view');
+  },
+  add(vs){
+    const bg = Model.classes.find(c => c.bg) || Model.add('Clear road', true);
+    for (const v of vs){ if (bg.vecs.length >= MAX_SAMPLES) bg.vecs.splice(0, 1); bg.vecs.push(v); }   // oldest out when full
+    Model.save(); renderAll?.();
+  }
+};
+function negCmd(kind){ if (S.role === 'controller' && Link.linked) Link.send({t:'cmd', c:{k:'neg', kind}}); else Neg.capture(kind); }
 
 /* send a command: to the vehicle if linked as controller, else run locally */
 function cmd(c){ if (S.role === 'controller' && Link.linked) Link.send({t:'cmd', c}); else Engine.handle(c); }
@@ -1901,6 +1946,7 @@ const Link = {
           if (c.vecs.length >= MAX_SAMPLES){ toast(`${c.name}: ${MAX_SAMPLES} samples reached`, 'ok'); stopRec(); }
         } break;
       case 'recerr': if (this.linked === e){ toast(d.msg, 'warn'); stopRec(); } break;
+      case 'neg': if (this.linked === e){ Neg.add(unpackVecs(d.p)); Model.changed(); S.synced = Date.now(); toast(d.name ? `Learned: that was not “${d.name}”` : 'Learned the empty view', 'ok'); } break;
       case 'near': if (this.linked === e){ const c = Model.byId(d.id); if (c?.rule){ c.rule.near = d.v; Model.changed(); S.synced = Date.now(); renderRules(); toast(`${S.linkedName} set “${c.name}” to act at size ≥ ${d.v}%`, 'ok'); } } break;
       case 'dsok': S.synced = Date.now(); S.lastSent = Date.now(); toast(`Vehicle learned ${d.learned} objects`, 'ok'); renderSend(); break;
       case 'dserr': toast('Transfer failed. Please send again.', 'bad'); renderSend(); break;
@@ -2292,7 +2338,7 @@ const Tracker = {
     for (const b of cands){
       const r = Model.predict(AI.embedBox(f, b)); if (!r) return null;
       const top = r.top;
-      if (!top.c.bg && Model.sure(top)) hits.push({c:top.c, p:top.p, sim:top.sim, sc:top.p*top.sim, box:b});
+      if (!top.c.bg && Model.sure(top) && top.mx >= .6 && top.mx - r.bgMx >= .03) hits.push({c:top.c, p:top.p, sim:top.sim, sc:top.p*top.sim*(1 + 4*(top.mx - r.bgMx)), box:b});
       const g = r.list.find(x => !x.c.bg); if (g && (!guess || g.p > guess.p)) guess = {c:g.c, p:g.p};
     }
     this.guess = guess;
@@ -3025,6 +3071,8 @@ $('#ckCamBtn').onclick = () => Cam.power(true);
 $('#testBtn').onclick = () => Test.start();
 $('#testStop').onclick = () => Test.stop();
 $('#testReset').onclick = () => Test.reset();
+$('#testWrong').onclick = () => Neg.capture('wrong'); $('#testView').onclick = () => Neg.capture('view');
+$('#negWrong').onclick = () => negCmd('wrong'); $('#negView').onclick = () => negCmd('view');
 $$('#srcCard [data-src]').forEach(b => b.onclick = () => setSrc(b.dataset.src));
 $('#testList').addEventListener('click', e => { const b = e.target.closest('[data-near]'); if (b) Test.setNear(b.dataset.near); });
 $('#gatePair').onclick = () => BLE.pair();
